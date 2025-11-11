@@ -18,7 +18,7 @@ def signup(request):
         return redirect('signin')
     return render(request ,'signup.html')
 
-def sigin(request):
+def signin(request):
     if request.method == 'POST' :
         email = request.POST['email']
         password = request.POST['password']
@@ -31,4 +31,4 @@ def sigin(request):
             
         else:
             messages.error(request , 'nhi hoaa')
-    return (request , render('sign.html'))
+    return render(request , 'signin.html')
