@@ -110,22 +110,57 @@
 
 <body>
     <div class = "Login-box">
-    <h2>
-        Login
-    </h2>
-    <form method = POST>
+    <h2>Add Animal Data</h2>
+    
+    <!-- Show Error/Success Messages -->
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li {% if message.tags == 'success' %} style="color: #4dff4d;" {% endif %}>
+                {{ message }}
+            </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="POST">
         {% csrf_token %}
-        <div class ="user-box">
-        <input type = "email" name ="email" required ="">
-        <label>Email</label>
+        
+        <div class="user-box">
+            <input type="text" name="animal_id" required="">
+            <label>Animal ID</label>
+        </div>
+        
+        <div class="user-box">
+            <input type="text" name="animal_type" required="">
+            <label>Type (e.g., Cow)</label>
+        </div>
+        
+        <div class="user-box">
+            <input type="number" name="age" required="">
+            <label>Age</label>
+        </div>
+        
+        <div class="user-box">
+            <input type="text" name="sex" required="">
+            <label>Sex (e.g., Male, Female)</label>
+        </div>
+        
+        <div class="user-box">
+            <input type="text" name="vaccination_detail" required="">
+            <label>Vaccination Detail</label>
         </div>
 
-        <div class ="user-box">
-        <input type = "password" name ="password" required ="">
-        <label>Password</label>
-        </div>
-
-        <button type = "submit"> Login </button>
+        <!-- "Done" button -->
+        <button type="submit">Done</button>
+        
+        <!-- "Back" button -->
+        <!-- Note we use 'accounts:home' to be specific -->
+        <button type="button" 
+                onclick="location.href='{% url 'accounts:home' %}'" 
+                style="background-color: transparent; border: 1px solid #fff; margin-top: 15px;">
+            Back
+        </button>
     </form>
 
 

@@ -15,7 +15,7 @@ def signup(request):
         user = User.objects.create_user(username = username ,email = email , password= password)
         user.save()
         messages.success(request , 'ho gia')
-        return redirect('signin')
+        return redirect('accounts:signin')
     return render(request ,'signup.html')
 
 def signin(request):
@@ -27,7 +27,7 @@ def signin(request):
         
         if user is not None :
             auth.login(request , user)
-            redirect ('home')
+            redirect ('animals:add_animal')
             
         else:
             messages.error(request , 'nhi hoaa')
