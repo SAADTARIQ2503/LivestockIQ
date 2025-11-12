@@ -1,134 +1,151 @@
-{% comment %} <!DOCTYPE html>
-<html>
-<head>
-    <title>Sign In</title>
-</head>
-<body>
-<h2>Login</h2>
-<form method="POST">
-    {% csrf_token %}
-    Username: <input type="text" name="username"><br><br>
-    Password: <input type="password" name="password"><br><br>
-    Email: <input type="email" name="email"><br><br>
-    <button type="submit">Sign In</button>
-</form>
-</body>
-</html> {% endcomment %}
-
-
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>
-        Login
-    </title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In</title>
+    
     <style>
-        body{
-            margin : 0;
-            padding : 0;
-            background-image=:url("{}");
+        /* Base styling to cover the viewport and center the form */
+        body {
+            margin: 0;
+            padding: 0;
+            /* Reference the local static image using Django tag */
+            background-image: url("{% static 'accounts/BgImg.jpeg' %}");
             background-size: cover;
-
-
-            height: 100vh;
-            
+            background-position: center;
             display: flex;
-            justify-content:center; {% comment %} y axis mid point  {% endcomment %}
-            align-items:center;{% comment %} x axins mid point {% endcomment %}
-
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: #fff; /* Default text color for the form */
         }
 
-        .Login-box{
+        /* Form Container - Applies the frosted glass effect */
+        .Login-box {
             width: 350px;
             padding: 40px;
-
-            background: rgba(0,0,0,0.4);  {% comment %} 60 percent visible {% endcomment %}
-            backdrop-filter: blur(5px);   {% comment %} BLURR EFFECT {% endcomment %}
-            border-radius: 10px;
+            /* Semi-transparent dark background */
+            background: rgba(0, 0, 0, 0.4);  
+            /* The key blur effect matching the original image */
+            backdrop-filter: blur(8px);  
+            border-radius: 5px; /* Subtle rounding */
             color: white;
-
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); /* Shadow for depth */
         }
+
         .Login-box h2 {
             margin: 0 0 30px;
             padding: 0;
             color: #fff;
             text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            /* Match the subtle, spaced-out font from the original image */
+            font-weight: 300;
+            letter-spacing: 1px;
+            font-size: 24px;
+        }
+
+        /* Input Group (for relative positioning of label) */
+        .user-box {
+            position: relative; 
+            margin-bottom: 30px;
+        }
+
+        /* Input Field Styling */
+        .user-box input {
+            width: 100%;
+            padding: 8px 0; /* Padding matched to original design */
+            color: white;
+            border: none;
+            /* Light line for the input field */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.7); 
+            background: transparent; 
+            outline: none; 
+            font-size: 16px;
+        }
+        
+        /* Floating Label Styling */
+        .user-box label {
+            position: absolute; 
+            top: 5px; /* Adjust label starting position */
+            left: 0;
+            transition: .3s; /* Smoother transition */
+            color: rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            font-size: 16px;
+        }
+
+        /* Label movement on focus/valid content */
+        .user-box input:focus ~ label,
+        .user-box input:not(:placeholder-shown) ~ label {
+            top: -20px;
+            font-size: 12px;
+            color: #fff; /* Pure white when focused */
+        }
+
+        /* Fix for input background on Webkit autofill */
+        .user-box input:-webkit-autofill,
+        .user-box input:-webkit-autofill:hover, 
+        .user-box input:-webkit-autofill:focus {
+            -webkit-text-fill-color: white;
+            transition: background-color 5000s ease-in-out 0s;
         }
 
 
+        /* Button Styling - Matching the dark purple from the image */
+        button {
+            /* Dark purple color from the image */
+            background-color: #2b0c4d; 
+            color: white;
+            border: none;
+            padding: 12px 20px; /* Increased padding for better match */
+            width: 100%; 
+            cursor: pointer; 
+            border-radius: 2px;
+            font-size: 16px;
+            letter-spacing: 1px;
+            transition: background 0.3s;
+        }
 
-
-    button {
-    background-color: #2e1a33; 
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    width: 100%; 
-    cursor: pointer; 
-   }
-
-    button:hover {
-    background-color: #4a2b52; 
-   }
-
-
-
-
-   .user-box input {
-    width: 100%;
-    padding: 10px 0;
-    color: white;
-    border: none;
-    border-bottom: 1px solid #fff; 
-    background: transparent; 
-    outline: none; 
-}
- 
-.user-box {
-    position: relative; 
-    margin-bottom: 30px;
-}
-
-.user-box label {
-    position: absolute; 
-    top: 0;
-    left: 0;
-    transition: .5s;
-}
-
-.user-box input:focus ~ label,
-.user-box input:valid ~ label {
-    top: -20px;
-    font-size: 12px;
-    color: #bdb8b8;
-}
-</style>
+        button:hover {
+            background-color: #471d79; 
+        }
+    </style>
 
 </head>
 
 <body>
     <div class = "Login-box">
-    <h2>
-        Login
-    </h2>
-    <form method = POST>
-        {% csrf_token %}
-        <div class ="user-box">
-        <input type = "email" name ="email" required ="">
-        <label>Email</label>
-        </div>
+        <h2>
+            Login
+        </h2>
+        <form method="POST">
+            {% csrf_token %} <!-- MANDATORY Django security tag -->
+            
+            <!-- Username/Email field -->
+            <div class ="user-box">
+                <!-- Use placeholder=" " for the CSS floating label trick to work reliably -->
+                <input type="text" name="username" required="" placeholder=" ">
+                <label>Username</label> 
+                <!-- Changed to Username to match the text in the original image -->
+            </div>
+            <div class ="user-box">
+                <!-- Use placeholder=" " for the CSS floating label trick to work reliably -->
+                <input type="email" name="email" required="" placeholder=" ">
+                <label>Email</label> 
+                <!-- Changed to Email to match the text in the original image -->
+            </div>
 
-        <div class ="user-box">
-        <input type = "password" name ="password" required ="">
-        <label>Password</label>
-        </div>
+            <!-- Password field -->
+            <div class ="user-box">
+                <input type="password" name="password" required="" placeholder=" ">
+                <label>Password</label>
+            </div>
 
-        <button type = "submit"> Login </button>
-    </form>
-
-
+            <button type="submit"> Login </button>
+        </form>
     </div>
 </body>
 </html>
