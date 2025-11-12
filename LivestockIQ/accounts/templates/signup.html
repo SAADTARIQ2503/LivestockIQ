@@ -1,16 +1,134 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up</title>
+    <style>
+        /* CSS is included inline here for a complete, single block of code.
+           In a real project, you would put this in a static file like 'style.css'.
+        */
+        body {
+            /* Using a publicly available, high-quality image of cows for the background */
+            background-image: url("{% static 'accounts/BgImg.jpeg' %}");
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Full viewport height */
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #fff; /* Default text color for the form */
+        }
+
+        .signup-container {
+            /* The key to the blurred, semi-transparent overlay */
+            background: rgba(0, 0, 0, 0.4); /* Semi-transparent dark background */
+            backdrop-filter: blur(8px); /* Blur effect on the background behind the element */
+            padding: 40px;
+            border-radius: 5px; /* Subtle rounding */
+            width: 350px; /* Set a fixed width */
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+        }
+
+        .signup-container h2 {
+            text-align: center;
+            font-weight: 300;
+            margin-bottom: 30px;
+            color: #fff;
+            letter-spacing: 1px;
+            font-size: 24px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 8px 0;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.7); /* Lighter line for input */
+            outline: none;
+            color: #fff;
+            font-size: 16px;
+        }
+
+        .input-group label {
+            position: absolute;
+            top: 5px;
+            left: 0;
+            pointer-events: none;
+            transition: 0.3s;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+        }
+
+        /* Move label up when input is focused or has content */
+        .input-group input:focus ~ label,
+        .input-group input:not(:placeholder-shown) ~ label {
+            top: -20px;
+            font-size: 12px;
+            color: #fff; /* Make it pure white when focused */
+        }
+        
+        /* Webkit browsers (like Chrome) need this to prevent the label-trick from breaking 
+           due to autofill/autocomplete applying a background color */
+        .input-group input:-webkit-autofill,
+        .input-group input:-webkit-autofill:hover, 
+        .input-group input:-webkit-autofill:focus {
+            -webkit-text-fill-color: white;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        .signup-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 16px;
+            letter-spacing: 1px;
+            /* Closely match the dark purple color in the image */
+            background: #2b0c4d; 
+            color: #fff;
+            transition: background 0.3s;
+        }
+
+        .signup-button:hover {
+            background: #471d79;
+        }
+    </style>
 </head>
 <body>
-<h2>Create Account</h2>
-<form method="POST">
-    {% csrf_token %}
-    Username: <input type="text" name="username"><br><br>
-    Password: <input type="password" name="password"><br><br>
-    Email: <input type="email" name="email"><br><br>
-    <button type="submit">Sign Up</button>
-</form>
+
+    <div class="signup-container">
+        <h2>SignUp</h2>
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="input-group">
+                <input type="text" name="username" id="username" required placeholder=" ">
+                <label for="username">Username</label>
+            </div>
+
+            <div class="input-group">
+                <input type="email" name="email" id="email" required placeholder=" ">
+                <label for="email">Email</label>
+            </div>
+
+            <div class="input-group">
+                <input type="password" name="password" id="password" required placeholder=" ">
+                <label for="password">Password</label>
+            </div>
+            
+            <button type="submit" class="signup-button">Sign Up</button>
+        </form>
+    </div>
+
 </body>
 </html>
