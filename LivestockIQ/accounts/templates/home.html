@@ -132,14 +132,18 @@
         
         <div class="nav-item">
             <!-- Home: Represents the main dashboard -->
-            <i class="fa-solid fa-house"></i>
-            <span class="tooltip">Home</span>
+            <a href="{% url 'home' %}">
+                <i class="fa-solid fa-house"></i>
+                <span class="tooltip">Home</span>
+            </a>
         </div>
 
         <div class="nav-item">
             <!-- Add Animal: Using the cow icon for livestock -->
-            <i class="fas fa-cow"></i> 
-            <span class="tooltip">Add Animal</span>
+            <a href="{% url 'add_animal' %}">
+                <i class="fas fa-cow"></i> 
+                <span class="tooltip">Add Animal</span>
+            </a>
         </div>
         
         <div class="nav-item">
