@@ -6,7 +6,7 @@ def add_animal(request):
     if request.method == 'POST':
         # Get data from the form
         a_id = request.POST['animal_id']
-        a_type = request.POST['animal_type']
+        a_type = request.POST['type']
         a_age = request.POST['age']
         a_sex = request.POST['sex']
         a_vax = request.POST['vaccination_detail']
@@ -32,4 +32,4 @@ def add_animal(request):
 
     else:
         # Just show the blank form
-        return render(request, 'animals/add_animal.html')
+        return render(request, 'add_animal.html')

@@ -132,39 +132,39 @@
         
         <div class="nav-item">
             <!-- Home: Represents the main dashboard -->
-            <a href="{% url 'home' %}">
+            <a href="{% url 'accounts:home' %}">
                 <i class="fa-solid fa-house"></i>
                 <span class="tooltip">Home</span>
             </a>
         </div>
 
         <div class="nav-item">
-            <!-- Add Animal: Using the cow icon for livestock -->
-            <a href="{% url 'add_animal' %}">
+            
+            <a href="{% url 'animals:add_animal' %}">
                 <i class="fas fa-cow"></i> 
                 <span class="tooltip">Add Animal</span>
             </a>
         </div>
         
         <div class="nav-item">
-            <!-- Vaccination Schedule: Using a syringe/needle for medical/vaccination -->
+            
             <i class="fa-regular fa-calendar"></i>
             <span class="tooltip">Vaccination Schedule</span>
         </div>
         
         <div class="nav-item">
-            <!-- Environmental Data: Using a temperature/thermometer icon -->
+            
             <i class="fas fa-thermometer-half"></i> 
             <span class="tooltip">Environmental Data</span>
         </div>
 
         <div class="nav-item">
-            <!-- Anomalies: Using a heartbeat/signal line to indicate health monitoring/issues -->
+            
             <i class="fa-regular fa-eye"></i>
             <span class="tooltip">Anomalies</span>
         </div>
         
-        <!-- Search is a standard utility function -->
+        
         <div class="nav-item">
             <i class="fas fa-search"></i>
             <span class="tooltip">Search Livestock</span>

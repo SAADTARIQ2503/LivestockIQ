@@ -36,5 +36,6 @@ def signin(request):
             messages.error(request , 'nhi hoaa')
     return render(request , 'signin.html')
 
-def addAnimal(request):
-    return render(request , 'addAnimal.html')
+
+# def addAnimal(request):
+#     return render(request , 'addAnimal.html')
