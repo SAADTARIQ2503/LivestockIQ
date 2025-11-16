@@ -1,0 +1,422 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Vaccination</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMDJ8uR0FMOQo2T8Y897E9uE9h/u0F9+5W1E9sW9uC1F1C1W1X1C1W1W1W1C1W1" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <style>
+        /* Base styling */
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url("{% static 'accounts/BgImg.jpeg' %}");
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: #fff;
+            display: flex; 
+        }
+
+        /* --- SIDEBAR STYLING --- */
+        .sidebar {
+            width: 80px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            background: rgba(0, 0, 0, 0.4); 
+            backdrop-filter: blur(8px); 
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+        .nav-item a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            color: inherit; 
+            text-decoration: none; 
+            position: relative; 
+        }
+        .nav-item {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; 
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1); 
+        }
+        .nav-item i {
+            font-size: 24px;
+            color: #ffffff;
+            transition: color 0.2s;
+        }
+        .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #2b0c4d; 
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            left: calc(100% + 15px);
+            white-space: nowrap;
+            transition: opacity 0.3s;
+        }
+        .nav-item:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 100%;
+            margin-top: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent #2b0c4d transparent transparent;
+        }
+
+        /* --- MAIN CONTENT & FORM CARD --- */
+        .main-content {
+            margin-left: 80px;
+            width: calc(100% - 80px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .form-card {
+            width: 500px; /* Slightly wider form for better layout */
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.4);  
+            backdrop-filter: blur(8px);  
+            border-radius: 5px; 
+            color: white;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .form-card h2 {
+            margin: 0 0 30px;
+            padding: 0;
+            color: #fff;
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 1px;
+            font-size: 24px;
+        }
+
+        /* --- FORM STYLING --- */
+        .user-box {
+            position: relative; 
+            margin-bottom: 30px;
+        }
+        
+        /* Select styling */
+        .user-box select {
+            width: 100%;
+            padding: 8px 0;
+            color: #fff;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.7); 
+            background: transparent; 
+            outline: none; 
+            font-size: 16px;
+            appearance: none; /* Remove default arrow */
+        }
+        .user-box select option {
+             /* Make options visible in dropdown */
+            background: #2b0c4d; 
+            color: #fff;
+        }
+        
+        /* Custom arrow for select */
+        .select-arrow {
+            position: absolute;
+            right: 0;
+            top: 5px;
+            pointer-events: none;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .user-box input[type="text"], 
+        .user-box input[type="date"],
+        .user-box input[type="number"] {
+            width: 100%;
+            padding: 8px 0;
+            color: white;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.7); 
+            background: transparent; 
+            outline: none; 
+            font-size: 16px;
+        }
+
+        .user-box label {
+            position: absolute; 
+            top: 5px;
+            left: 0;
+            transition: .3s; 
+            color: rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            font-size: 16px;
+        }
+        
+        /* Floating logic for all inputs/select */
+        .user-box input:focus ~ label,
+        .user-box input:not(:placeholder-shown) ~ label,
+        .user-box select:valid ~ label {
+            top: -20px;
+            font-size: 12px;
+            color: #fff; 
+        }
+
+        /* Group Toggle Switch */
+        .toggle-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 50px;
+          height: 24px;
+        }
+
+        .switch input { 
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 24px;
+        }
+
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 16px;
+          width: 16px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+
+        input:checked + .slider {
+          background-color: #2b0c4d;
+        }
+
+        input:checked + .slider:before {
+          transform: translateX(26px);
+        }
+
+        /* --- BUTTONS --- */
+        .submit-btn {
+            background-color: #2b0c4d; 
+            color: white;
+            border: none;
+            padding: 12px 20px; 
+            width: 100%;
+            cursor: pointer; 
+            border-radius: 2px;
+            font-size: 16px;
+            letter-spacing: 1px;
+            transition: background 0.3s;
+            margin-top: 20px;
+        }
+        .submit-btn:hover {
+            background-color: #471d79; 
+        }
+        
+        .footer-link {
+            display: block;
+            margin-top: 20px;
+            color: #40c4ff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: color 0.2s;
+            text-align: center;
+        }
+        .footer-link:hover {
+            color: #fff;
+        }
+        
+        .active-icon {
+            color: #ffc107 !important; 
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- Vertical Navigation Bar -->
+    <div class="sidebar">
+        
+        <div class="nav-item">
+            <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house"></i><span class="tooltip">Home</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'animals:add_animal' %}"><i class="fas fa-cow"></i><span class="tooltip">Add Animal</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar active-icon"></i><span class="tooltip">Vaccination Schedule</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span class="tooltip">Environmental Data</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="#"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
+        </div>
+        
+    </div>
+
+
+    <!-- Main Content Area: Centering the Scheduling Form -->
+    <div class="main-content">
+        <div class="form-card">
+            <h2>Schedule New Vaccination</h2>
+            <form method="POST">
+                {% csrf_token %} 
+                
+                <!-- Toggle for Individual or Group -->
+                <div class="toggle-container">
+                    <span>Schedule for Individual Animal</span>
+                    <label class="switch">
+                        <input type="checkbox" id="groupToggle" name="is_group">
+                        <span class="slider"></span>
+                    </label>
+                    <span>Schedule for Group/Herd</span>
+                </div>
+                
+                <!-- Individual Animal ID (Visible by default) -->
+                <div class="user-box" id="individualIdField">
+                    <input type="text" name="animal_id" placeholder=" ">
+                    <label>Individual Animal ID:</label>
+                </div>
+                
+                <!-- Group/Type Field (Hidden by default) -->
+                <div class="user-box" id="groupTypeField" style="display:none;">
+                    <div style="position: relative;">
+                        <select name="group_type" required>
+                            <option value="" disabled selected></option>
+                            <option value="Cattle">Cattle</option>
+                            <option value="Sheep">Sheep</option>
+                            <option value="Goats">Goats</option>
+                        </select>
+                        <label>Select Animal Group/Type:</label>
+                        <i class="fas fa-chevron-down select-arrow"></i>
+                    </div>
+                </div>
+
+                <div class="user-box">
+                    <input type="text" name="vaccine_name" required="" placeholder=" ">
+                    <label>Vaccine Name:</label>
+                </div>
+                
+                <div class="user-box">
+                    <input type="date" name="schedule_date" required>
+                    <label>Scheduled Date:</label>
+                </div>
+
+                <div class="user-box">
+                    <input type="text" name="dose_notes" placeholder=" ">
+                    <label>Dose/Notes (Optional):</label>
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-calendar-plus"></i> Schedule Vaccination
+                </button>
+            </form>
+            
+            <a href="{% url 'health:recommended_vaccines' %}" class="footer-link">
+                <i class="fas fa-syringe"></i> View Vaccine Recommendations
+            </a>
+            
+            <a href="{% url 'health:vaccination_schedule' %}" class="footer-link">
+                <i class="fas fa-arrow-left"></i> Back to Schedule Home
+            </a>
+            
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggle = document.getElementById('groupToggle');
+            const individualField = document.getElementById('individualIdField');
+            const groupField = document.getElementById('groupTypeField');
+            
+            // Function to toggle required attribute
+            function toggleRequired(element, isRequired) {
+                const input = element.querySelector('input, select');
+                if (input) {
+                    input.required = isRequired;
+                }
+            }
+
+            toggle.addEventListener('change', function() {
+                if (toggle.checked) {
+                    // Group is selected
+                    individualField.style.display = 'none';
+                    groupField.style.display = 'block';
+                    toggleRequired(individualField, false);
+                    toggleRequired(groupField, true);
+                } else {
+                    // Individual is selected
+                    individualField.style.display = 'block';
+                    groupField.style.display = 'none';
+                    toggleRequired(individualField, true);
+                    toggleRequired(groupField, false);
+                }
+            });
+            
+            // Initial check to set required fields correctly on load
+            toggleRequired(individualField, true);
+            toggleRequired(groupField, false);
+        });
+    </script>
+</body>
+</html>

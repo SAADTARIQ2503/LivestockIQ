@@ -263,7 +263,7 @@
             <a href="{% url 'animals:add_animal' %}"><i class="fas fa-cow"></i><span class="tooltip">Add Animal</span></a>
         </div>
         <div class="nav-item">
-            <a href="#"><i class="fa-regular fa-calendar"></i><span class="tooltip">Vaccination Schedule</span></a>
+            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar active-icon"></i><span class="tooltip">Vaccination Schedule</span></a>
         </div>
         <div class="nav-item">
             <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span class="tooltip">Environmental Data</span></a>
@@ -272,8 +272,7 @@
             <a href="#"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
         </div>
         <div class="nav-item">
-            <!-- Current Active Link -->
-            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search" style="color: #ffc107;"></i><span class="tooltip">Search Livestock</span></a>
+            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
         </div>
         
     </div>

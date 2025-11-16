@@ -131,46 +131,22 @@
     <div class="sidebar">
         
         <div class="nav-item">
-            <!-- Home: Represents the main dashboard -->
-            <a href="{% url 'accounts:home' %}">
-                <i class="fa-solid fa-house"></i>
-                <span class="tooltip">Home</span>
-            </a>
+            <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house"></i><span class="tooltip">Home</span></a>
         </div>
-
         <div class="nav-item">
-            
-            <a href="{% url 'animals:add_animal' %}">
-                <i class="fas fa-cow"></i> 
-                <span class="tooltip">Add Animal</span>
-            </a>
+            <a href="{% url 'animals:add_animal' %}"><i class="fas fa-cow"></i><span class="tooltip">Add Animal</span></a>
         </div>
-        
         <div class="nav-item">
-            
-            <i class="fa-regular fa-calendar"></i>
-            <span class="tooltip">Vaccination Schedule</span>
+            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar active-icon"></i><span class="tooltip">Vaccination Schedule</span></a>
         </div>
-        
         <div class="nav-item">
-            <a href="{% url 'environment:view_data' %}">
-                <i class="fas fa-thermometer-half"></i> 
-                <span class="tooltip">Environmental Data</span>
-            </a>
+            <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span class="tooltip">Environmental Data</span></a>
         </div>
-
         <div class="nav-item">
-            
-            <i class="fa-regular fa-eye"></i>
-            <span class="tooltip">Anomalies</span>
+            <a href="#"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
         </div>
-        
-        
         <div class="nav-item">
-            <a href="{% url 'animals:search_livestock' %}">
-                <i class="fas fa-search"></i>
-                <span class="tooltip">Search Livestock</span>
-            </a>
+            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
         </div>
         
     </div>

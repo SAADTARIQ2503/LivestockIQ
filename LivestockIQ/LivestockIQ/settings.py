@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os 
-
+from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts',
     'animals',
-    'environment'
+    'environment',
+    'health'
 ]
 
 MIDDLEWARE = [
@@ -136,3 +137,15 @@ STATICFILES_DIRS = [
 
 # The absolute path to the directory where collectstatic will gather static files for deployment
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+
+
+# Load environment variables from .env file
+load_dotenv() 
+
+# ... (rest of settings.py) ...
+
+API_KEYS = {
+    # Retrieve the key from the environment variables
+    'OPENWEATHERMAP': os.environ.get('OPENWEATHERMAP_KEY'),
+}

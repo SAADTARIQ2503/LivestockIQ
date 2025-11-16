@@ -252,54 +252,25 @@
 <body>
 
     <!-- Vertical Navigation Bar (Same as home.html) -->
-    <div class="sidebar">
+   <div class="sidebar">
         
         <div class="nav-item">
-            <!-- Home: Using namespaced URL for inter-app linking -->
-            <a href="{% url 'accounts:home' %}">
-                <i class="fa-solid fa-house"></i>
-                <span class="tooltip">Home</span>
-            </a>
+            <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house"></i><span class="tooltip">Home</span></a>
         </div>
-        
         <div class="nav-item">
-            <!-- Add Animal: Assumed to be in the current app's URL config -->
-            <a href="{% url 'animals:add_animal' %}">
-                <i class="fas fa-cow"></i> 
-                <span class="tooltip">Add Animal</span>
-            </a>
+            <a href="{% url 'animals:add_animal' %}"><i class="fas fa-cow"></i><span class="tooltip">Add Animal</span></a>
         </div>
-        
         <div class="nav-item">
-            <!-- Vaccination Schedule: Using namespaced URL for inter-app linking (assuming it's also in accounts) -->
-            <a href="#">
-                <i class="fa-regular fa-calendar"></i> 
-                <span class="tooltip">Vaccination Schedule</span>
-            </a>
+            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar active-icon"></i><span class="tooltip">Vaccination Schedule</span></a>
         </div>
-        
         <div class="nav-item">
-            <!-- Environmental Data: Using namespaced URL for inter-app linking (assuming it's also in accounts) -->
-            <a href="#">
-                <i class="fas fa-thermometer-half"></i> 
-                <span class="tooltip">Environmental Data</span>
-            </a>
+            <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span class="tooltip">Environmental Data</span></a>
         </div>
-        
         <div class="nav-item">
-            <!-- Anomalies: Using namespaced URL for inter-app linking (assuming it's also in accounts) -->
-            <a href="#">
-                <i class="fa-regular fa-eye"></i>
-                <span class="tooltip">Anomalies</span>
-            </a>
+            <a href="#"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
         </div>
-        
         <div class="nav-item">
-            <!-- Search: Using namespaced URL for inter-app linking (assuming it's also in accounts) -->
-            <a href="{% url 'animals:search_livestock' %}">
-                <i class="fas fa-search"></i>
-                <span class="tooltip">Search Livestock</span>
-            </a>
+            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
         </div>
         
     </div>
