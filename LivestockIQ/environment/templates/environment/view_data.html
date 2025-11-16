@@ -1,0 +1,117 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <title>Environmental Data</title>
+    <style>
+
+        body {
+            margin: 0;
+            padding: 0;
+            
+            background-image: url("{% static 'images/background.jpg' %}");
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .enviro-box { /*  glass box */
+            width: 450px;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            backdrop-filter: blur(8px);
+            color: white;
+        }
+
+        .enviro-box h2 {
+            margin: 0 0 30px;
+            padding: 0;
+            color: #fff;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        button { /* button style */
+            background-color: #2b0c4d;
+            border: 1px solid #fff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: 0.3s;
+            margin-top: 30px; 
+        }
+
+        button:hover {
+            background-color: #4a2b52;
+        }
+        
+        /* 2. NEW STYLE for the 2-column data */
+        .data-grid {
+            display: grid;
+            /* Creates 2 columns: 1st is 200px, 2nd takes rest of space */
+            grid-template-columns: 200px auto; 
+            row-gap: 15px; /* Space between rows */
+            font-size: 16px;
+        }
+
+        .data-label {
+            font-weight: bold;
+        }
+
+        .data-value {
+            text-align: right; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="enviro-box">
+        <h2>Environmental Data</h2>
+        
+
+        <div class="data-grid">
+            
+
+            <div class="data-label">Season:</div>
+            <div class="data-value">Winter</div>
+            
+
+            <div class="data-label">Temperature:</div>
+            <div class="data-value">37 celcious</div>
+            
+
+            <div class="data-label">Temperature in Barn:</div>
+            <div class="data-value">40 celcious</div>
+            
+
+            <div class="data-label">Humidity Level:</div>
+            <div class="data-value">12</div>
+            
+
+            <div class="data-label">Air quality index:</div>
+            <div class="data-value">100</div>
+            
+
+            <div class="data-label">Rain Fall Chance:</div>
+            <div class="data-value">10%</div>
+
+        </div>
+
+        <!-- 'Back' button -->
+        <button type="button">Back</button>
+    </div>
+
+</body>
+</html>
