@@ -28,11 +28,9 @@ def add_animal(request):
         new_animal.save()
         
         messages.success(request, 'Animal added successfully!')
-        # Go back to the 'home' page (in the 'accounts' app)
         return redirect('accounts:home') 
 
     else:
-        # Just show the blank form
         return render(request, 'add_animal.html')
     
 def search_animal(request):
@@ -40,8 +38,7 @@ def search_animal(request):
     query_set = {} # Dictionary to store filters applied
 
     if request.method == 'POST':
-        # Start with an empty Q object
-        # The Q object is used to build complex filters (AND/OR logic)
+        # Start with an empty Q object. The Q object is used to build complex filters (AND/OR logic)
         filters = Q() 
 
         # 1. Filter by Animal ID (Exact Match or Contains)

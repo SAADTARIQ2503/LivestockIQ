@@ -7,11 +7,11 @@
     <title>Sign In</title>
     
     <style>
-        /* Base styling to cover the viewport and center the form */
+        
         body {
             margin: 0;
             padding: 0;
-            /* Reference the local static image using Django tag */
+            
             background-image: url("{% static 'accounts/BgImg.jpeg' %}");
             background-size: cover;
             background-position: center;
@@ -20,7 +20,7 @@
             align-items: center;
             min-height: 100vh;
             font-family: Arial, sans-serif;
-            color: #fff; /* Default text color for the form */
+            color: #fff; 
         }
 
         /* Form Container - Applies the frosted glass effect */
@@ -126,16 +126,16 @@
             
             <!-- Username/Email field -->
             <div class ="user-box">
-                <!-- Use placeholder=" " for the CSS floating label trick to work reliably -->
+                
                 <input type="text" name="username" required="" placeholder=" ">
                 <label>Username</label> 
-                <!-- Changed to Username to match the text in the original image -->
+                
             </div>
             <div class ="user-box">
-                <!-- Use placeholder=" " for the CSS floating label trick to work reliably -->
+                
                 <input type="email" name="email" required="" placeholder=" ">
                 <label>Email</label> 
-                <!-- Changed to Email to match the text in the original image -->
+                
             </div>
 
             <!-- Password field -->

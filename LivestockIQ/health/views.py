@@ -1,5 +1,5 @@
 
-# Create your views here.
+
 from django.shortcuts import render
 
 
@@ -27,5 +27,5 @@ def schedule_form_view(request):
 
 def vaccination_schedule_view(request):
     
-    # Renders vaccination_schedule.html
+    
     return render(request, 'health/vaccination_schedule.html')
