@@ -16,7 +16,7 @@ def signup(request):
         
         user = User.objects.create_user(username = username ,email = email , password= password)
         user.save()
-        messages.success(request , 'ho gia')
+        messages.success(request , 'Successful')
         return redirect('accounts:signin')
     return render(request ,'signup.html')
 
@@ -33,9 +33,6 @@ def signin(request):
             return redirect('home')
             
         else:
-            messages.error(request , 'nhi hoaa')
+            messages.error(request , 'not successful')
     return render(request , 'signin.html')
 
-
-# def addAnimal(request):
-#     return render(request , 'addAnimal.html')
