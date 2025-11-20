@@ -30,7 +30,7 @@ def signin(request):
 
         if user is not None :
             auth.login(request, user)
-            return redirect('home')
+            return redirect('accounts:home')
             
         else:
             messages.error(request , 'not successful')
