@@ -1,19 +1,22 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LivestockIQ Home</title>
-    <!--Font Awesome link to a standard, reliable CDN for v6 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMDJ8uR0FMOQo2T8Y897E9uE9h/u0F9+5W1E9sW9uC1F1F1Q1C1C1W1X1C1W1W1W1C1W1" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    
+    <!-- CORRECTION: Updated Font Awesome link to a standard, reliable CDN for v6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMDJ8uR0FMOQo2T8Y897E9uE9h/u0F9+5W1E9sW9uC1F1C1W1X1C1W1W1W1C1W1"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <style>
         /* Base styling */
         body {
             margin: 0;
             padding: 0;
-            /* Use the same background image */
+            /* Standardized path */
             background-image: url("{% static 'accounts/BgImg.jpeg' %}");
             background-size: cover;
             background-position: center;
@@ -21,6 +24,65 @@
             font-family: Arial, sans-serif;
             color: #fff;
             display: flex;
+        }
+
+        /* -------------------------------------- */
+        /* 4. MESSAGE TOAST/POPUP STYLING (NEW) */
+        /* -------------------------------------- */
+        .message-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            /* Ensure it floats above everything */
+            width: 350px;
+        }
+
+        .message-toast {
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            font-weight: 600;
+            color: #fff;
+            animation: slideIn 0.5s ease-out;
+            opacity: 0.95;
+            backdrop-filter: blur(5px);
+        }
+
+        .message-toast.success {
+            background: rgba(40, 167, 69, 0.8);
+            /* Green */
+            border-left: 5px solid #28a745;
+        }
+
+        .message-toast.error {
+            background: rgba(220, 53, 69, 0.8);
+            /* Red */
+            border-left: 5px solid #dc3545;
+        }
+
+        .message-toast.warning {
+            background: rgba(255, 193, 7, 0.8);
+            /* Yellow */
+            color: #333;
+            border-left: 5px solid #ffc107;
+        }
+
+        .message-toast i {
+            margin-right: 10px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 0.95;
+            }
         }
 
         /* -------------------------------------- */
@@ -37,11 +99,23 @@
             align-items: center;
             padding-top: 20px;
             /* Semi-transparent dark background (matching Login/Signup card) */
-            background: rgba(0, 0, 0, 0.4); 
+            background: rgba(0, 0, 0, 0.4);
             /* Blur effect */
-            backdrop-filter: blur(8px); 
+            backdrop-filter: blur(8px);
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
             z-index: 100;
+        }
+
+        /* Updated to use <a> tags properly */
+        .nav-item a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            color: inherit;
+            text-decoration: none;
+            position: relative;
         }
 
         .nav-item {
@@ -50,7 +124,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative; /* Needed for tooltip positioning */
+            position: relative;
+            /* Needed for tooltip positioning */
             margin-bottom: 20px;
             cursor: pointer;
             transition: background 0.2s;
@@ -58,7 +133,7 @@
 
         .nav-item:hover {
             /* Subtle highlight on hover */
-            background: rgba(255, 255, 255, 0.1); 
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .nav-item i {
@@ -73,15 +148,15 @@
         .tooltip {
             visibility: hidden;
             opacity: 0;
-            background-color: #2b0c4d; /* Dark purple tooltip background */
+            background-color: #2b0c4d;
+            /* Dark purple tooltip background */
             color: #fff;
             text-align: center;
             border-radius: 4px;
             padding: 5px 10px;
             position: absolute;
             z-index: 1;
-            left: 100%; /* Position right outside the sidebar */
-            margin-left: 15px; /* Spacing from the sidebar */
+            left: calc(100% + 15px);
             white-space: nowrap;
             transition: opacity 0.3s;
         }
@@ -102,16 +177,17 @@
             border-style: solid;
             border-color: transparent #2b0c4d transparent transparent;
         }
-        
+
         /* -------------------------------------- */
         /* 3. MAIN CONTENT AREA */
         /* -------------------------------------- */
         .main-content {
-            margin-left: 80px; /* Offset content by sidebar width */
+            margin-left: 80px;
+            /* Offset content by sidebar width */
             padding: 20px;
             width: 100%;
             /* Semi-transparent background for the main content area */
-            background: rgba(0, 0, 0, 0.1); 
+            background: rgba(0, 0, 0, 0.1);
         }
 
         .dashboard-header {
@@ -122,33 +198,61 @@
             margin-bottom: 20px;
             text-align: center;
         }
+
+        .active-icon {
+            color: #ffc107 !important;
+        }
     </style>
 </head>
 
 <body>
 
+    <!-- MESSAGE CONTAINER (NEW) -->
+    <div class="message-container">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="message-toast {{ message.tags }}" role="alert">
+            <i
+                class="fas fa-{% if 'success' in message.tags %}check-circle{% elif 'error' in message.tags %}times-circle{% else %}exclamation-triangle{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
     <!-- Vertical Navigation Bar -->
     <div class="sidebar">
-        
+
         <div class="nav-item">
-            <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house"></i><span class="tooltip">Home</span></a>
+            <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house active-icon"></i><span
+                    class="tooltip">Home</span></a>
         </div>
+
         <div class="nav-item">
-            <a href="{% url 'animals:add_animal' %}"><i class="fas fa-cow"></i><span class="tooltip">Add Animal</span></a>
+            <a href="{% url 'animals:add_animal' %}"><i class="fas fa-cow"></i><span class="tooltip">Add
+                    Animal</span></a>
         </div>
+
         <div class="nav-item">
-            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar active-icon"></i><span class="tooltip">Vaccination Schedule</span></a>
+            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar"></i><span
+                    class="tooltip">Vaccination Schedule</span></a>
         </div>
+
         <div class="nav-item">
-            <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span class="tooltip">Environmental Data</span></a>
+            <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span
+                    class="tooltip">Environmental Data</span></a>
         </div>
+
         <div class="nav-item">
-            <a href="{% url 'alerts:anomalies' %}"><i class="fa-regular fa-eye active-icon"></i><span class="tooltip">Anomalies</span></a>
+            <a href="{% url 'alerts:anomalies' %}"><i class="fa-regular fa-eye"></i><span
+                    class="tooltip">Anomalies</span></a>
         </div>
+
         <div class="nav-item">
-            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
+            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search
+                    Livestock</span></a>
         </div>
-        
+
     </div>
 
     <!-- Main Content Area -->
@@ -159,14 +263,29 @@
         </div>
 
         <!-- Placeholder for Dashboard Content -->
-        <div style="background: rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 5px; min-height: 400px; text-align: center; color: #f0f0f0;">
+        <div
+            style="background: rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 5px; min-height: 400px; text-align: center; color: #f0f0f0;">
             <p>Your key metrics and real-time data will appear here.</p>
-            <p style="margin-top: 50px;">Today's Summary: Healthy Herd Count: 104 | Pending Vaccinations: 5 | Critical Anomalies: 1</p>
+            <p style="margin-top: 50px;">Today's Summary: Healthy Herd Count: 104 | Pending Vaccinations: 5 | Critical
+                Anomalies: 1</p>
         </div>
     </div>
 
-    
+    <!-- Auto-hide messages after 5 seconds (NEW) -->
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const messages = document.querySelectorAll('.message-toast');
+            if (messages.length > 0) {
+                messages.forEach(msg => {
+                    setTimeout(() => {
+                        msg.style.opacity = '0';
+                        msg.style.transition = 'opacity 1s ease-out';
+                        setTimeout(() => msg.remove(), 1000);
+                    }, 5000);
+                });
+            }
+        });
     </script>
 </body>
-</html>     
+
+</html>

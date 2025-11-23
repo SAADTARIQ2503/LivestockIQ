@@ -179,6 +179,32 @@
             color: #fff; 
         }
 
+        .user-box select {
+            width: 100%;
+            padding: 8px 0;
+            color: white;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.7); 
+            background: transparent; 
+            outline: none; 
+            font-size: 16px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .user-box select option {
+            background-color: #2b0c4d;
+            color: white;
+        }
+        .user-box select:focus ~ label,
+        .user-box select:valid ~ label {
+            top: -20px;
+            font-size: 12px;
+            color: #fff;
+        }
+        
         .user-box input:-webkit-autofill,
         .user-box input:-webkit-autofill:hover, 
         .user-box input:-webkit-autofill:focus {
@@ -279,7 +305,8 @@
     <div class="main-content">
         <div class="form-card">
             <h2>Add Animal Data</h2>
-            <form method="POST" enctype="multipart/form-data">
+            <div id="message-container" style="text-align: center; margin-bottom: 20px;"></div>
+            <form id="add-animal-form" method="POST" enctype="multipart/form-data">
                 {% csrf_token %} 
                 
                 <div class="user-box">
@@ -288,17 +315,24 @@
                 </div>
 
                 <div class="user-box">
-                    <input type="text" name="type" required="" placeholder=" ">
+                    <select name="type" required="">
+                        <option value="" disabled selected hidden></option>
+                        <option value="Cow">Cow</option>
+                        <option value="Goat">Goat</option>
+                        <option value="Sheep">Sheep</option>
+                    </select>
                     <label>Type:</label>
                 </div>
                 
                 <div class="user-box">
-                    <input type="number" name="age" required="" placeholder=" ">
+                    <select name="age" id="age-select" required="">
+                        <option value="" disabled selected hidden> </option>
+                    </select>
                     <label>Age:</label>
                 </div>
 
                 <div class="user-box">
-                    <input type="text" name="sex" required="" placeholder=" ">
+                    <input type="text" name="sex" required="" pattern="[MFmf]" maxlength="1" title="Please enter 'M' for Male or 'F' for Female." placeholder=" ">
                     <label>Sex:</label>
                 </div>
 
@@ -327,8 +361,70 @@
     </div>
 
     <script>
-        // Placeholder script for any future interactivity.
-        // The "Done" button is styled as a link/text but performs a submit action.
+        const ageRanges = {
+            'Cow': [
+                '0–6 months',
+                '6–12 months',
+                '1–2 years',
+                '2+ years'
+            ],
+            'Sheep': [
+                '0–12 months',
+                '1–1.5 years',
+                '1.5 years'
+            ],
+            'Goat': [
+                '0–6 months',
+                '6–18 months',
+                '1.5+ years'
+            ]
+        };
+
+        const animalTypeSelect = document.querySelector('select[name="type"]');
+        const ageSelect = document.getElementById('age-select');
+
+        animalTypeSelect.addEventListener('change', (event) => {
+            const animalType = event.target.value;
+            const ages = ageRanges[animalType] || [];
+
+            // Clear existing options
+            ageSelect.innerHTML = '<option value="" disabled selected hidden>Select age range</option>';
+
+            // Add new options
+            ages.forEach(age => {
+                const option = document.createElement('option');
+                option.value = age;
+                option.textContent = age;
+                ageSelect.appendChild(option);
+            });
+        });
+
+        document.getElementById('add-animal-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const formData = new FormData(form);
+            const messageContainer = document.getElementById('message-container');
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageContainer.innerHTML = `<p style="color: ${data.status === 'success' ? 'lightgreen' : 'salmon'};">${data.message}</p>`;
+                if (data.status === 'success') {
+                    form.reset();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                messageContainer.innerHTML = `<p style="color: salmon;">An unexpected error occurred.</p>`;
+            });
+        });
     </script>
 </body>
 </html>

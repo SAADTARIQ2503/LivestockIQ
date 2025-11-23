@@ -318,7 +318,8 @@
     <div class="main-content">
         <div class="form-card">
             <h2>Schedule New Vaccination</h2>
-            <form method="POST">
+            <div id="message-container" style="color: red; text-align: center; margin-bottom: 10px;"></div>
+            <form id="scheduleForm">
                 {% csrf_token %} 
                 
                 <!-- Toggle for Individual or Group -->
@@ -415,6 +416,45 @@
             // Initial check to set required fields correctly on load
             toggleRequired(individualField, true);
             toggleRequired(groupField, false);
+
+            const form = document.getElementById('scheduleForm');
+            const messageContainer = document.getElementById('message-container');
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    messageContainer.textContent = result.message;
+                    if (result.status === 'success') {
+                        messageContainer.style.color = 'green';
+                        form.reset();
+                        // Optionally redirect after a short delay
+                        setTimeout(() => {
+                            window.location.href = "{% url 'health:vaccination_schedule' %}";
+                        }, 2000);
+                    } else {
+                        messageContainer.style.color = 'red';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    messageContainer.style.color = 'red';
+                    messageContainer.textContent = 'An unexpected error occurred. Please try again.';
+                });
+            });
         });
     </script>
 </body>

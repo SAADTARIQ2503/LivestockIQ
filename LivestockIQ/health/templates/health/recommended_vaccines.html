@@ -104,6 +104,46 @@
             min-height: 100vh;
         }
 
+        .season-filter-form {
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .season-filter-form label {
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .season-filter-form select {
+            padding: 8px 12px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+            -webkit-appearance: none; /* Remove default arrow on select */
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-6.5%200-12.3%203.2-16%208.7a17.6%2017.6%200%200%200%200%2018.8l128%20127.9c3.7%203.7%209.2%205.5%2014.3%205.5s10.6-1.8%2014.3-5.5L287%2088.2c3.8-3.5%203.8-9.5%200-13z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 8px top 50%;
+            background-size: 12px auto;
+            cursor: pointer;
+        }
+
+        .season-filter-form select option {
+            background-color: #333; /* Darker background for options */
+            color: white;
+        }
+
+
         .data-card {
             background: rgba(0, 0, 0, 0.4);  
             backdrop-filter: blur(8px);  
@@ -131,6 +171,7 @@
 
         .vax-table {
             width: 100%;
+            table-layout: fixed; /* Ensures columns have equal width */
             border-collapse: collapse;
             margin-bottom: 30px;
         }
@@ -138,11 +179,16 @@
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            word-wrap: break-word; /* Prevents long content from overflowing */
         }
         .vax-table th {
             background: rgba(0, 0, 0, 0.2);
             font-weight: 600;
         }
+        .vax-table th:nth-child(1), .vax-table td:nth-child(1) { width: 35%; } /* Disease */
+        .vax-table th:nth-child(2), .vax-table td:nth-child(2) { width: 20%; } /* Min Age (Months) */
+        .vax-table th:nth-child(3), .vax-table td:nth-child(3) { width: 25%; } /* Frequency */
+        .vax-table th:nth-child(4), .vax-table td:nth-child(4) { width: 20%; } /* Season */
         .vax-table tr:hover {
             background: rgba(255, 255, 255, 0.05);
         }
@@ -200,34 +246,57 @@
                 Reference the tables below for recommended vaccination schedules organized by animal type.
             </p>
 
+            <form method="GET" class="season-filter-form">
+                <label for="season-select">Filter by Season:</label>
+                <select name="season" id="season-select" onchange="this.form.submit()">
+                    <option value="">All Recommendations</option>
+                    <option value="current" {% if selected_season_filter == 'current' %}selected{% endif %}>
+                        Current Season ({{ current_season_name }})
+                    </option>
+                    <option value="seasonal" {% if selected_season_filter == 'seasonal' %}selected{% endif %}>
+                        Seasonal
+                    </option>
+                    <option value="non-seasonal" {% if selected_season_filter == 'non-seasonal' %}selected{% endif %}>
+                        Non-Seasonal
+                    </option>
+                    {% for season in available_seasons %}
+                        <option value="{{ season }}" {% if selected_season_filter == season %}selected{% endif %}>
+                            {{ season }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+
             {% for animal_type, vaccines in recommended_data.items %}
                 <div class="data-card" style="padding: 15px; margin-bottom: 25px;">
                     <h2>{{ animal_type }}</h2>
                     <table class="vax-table">
                         <thead>
                             <tr>
-                                <th>Vaccine Name</th>
-                                <th>Recommended Age/Group</th>
+                                <th>Disease</th>
+                                <th>Min Age (Months)</th>
                                 <th>Frequency</th>
+                                <th>Season</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for vaccine in vaccines %}
                                 <tr>
-                                    <td>{{ vaccine.name }}</td>
-                                    <td>{{ vaccine.age_range }}</td>
-                                    <td>{{ vaccine.frequency }}</td>
+                                    <td>{{ vaccine.Disease|default:"N/A" }}</td>
+                                    <td>{{ vaccine.Min_Age_Months|default:"N/A" }}</td>
+                                    <td>{{ vaccine.Dosage_Frequency|default:"N/A" }}</td>
+                                    <td>{{ vaccine.Seasonality_Logic|default:"N/A" }}</td>
                                 </tr>
                             {% empty %}
                                 <tr>
-                                    <td colspan="3">No specific recommendations found.</td>
+                                    <td colspan="4">No specific recommendations found for this season.</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             {% empty %}
-                <p style="text-align: center;">No recommendation data available.</p>
+                <p style="text-align: center;">No recommendation data available for the selected filter.</p>
             {% endfor %}
 
             <a href="{% url 'health:vaccination_schedule' %}" class="back-link">

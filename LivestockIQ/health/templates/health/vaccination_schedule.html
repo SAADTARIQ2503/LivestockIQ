@@ -238,43 +238,46 @@
                 
                 <!-- Upcoming Schedule -->
                 <div class="schedule-list-card">
-                    <h3><i class="fas fa-bell"></i> Upcoming Vaccines (Next 7 Days)</h3>
+                    <h3><i class="fas fa-bell"></i> Upcoming Vaccines</h3>
                     
-                    <!-- Placeholder Loop for Upcoming Tasks -->
-                    <div class="task-item">
-                        <span>BVD - Cattle Group C</span>
-                        <span class="task-meta">2025-11-20</span>
-                    </div>
-                    <div class="task-item">
-                        <span>IBR/BVD - ID 10489</span>
-                        <span class="task-meta">2025-11-22</span>
-                    </div>
-                    <div class="task-item">
-                        <span>Tetanus - Lambs (Newborn)</span>
-                        <span class="task-meta">2025-11-25</span>
-                    </div>
-                    <p style="font-size: 12px; margin-top: 15px; text-align: right; color: rgba(255, 255, 255, 0.6);">View All >></p>
-
+                    {% for schedule in schedules %}
+                        {% if not schedule.completed %}
+                            <div class="task-item">
+                                <span>
+                                    {{ schedule.vaccine_name }} - 
+                                    {% if schedule.is_group %}
+                                        Group: {{ schedule.group_type }}
+                                    {% else %}
+                                        ID: {{ schedule.animal.animal_id }}
+                                    {% endif %}
+                                </span>
+                                <span class="task-meta">{{ schedule.schedule_date|date:"Y-m-d" }}</span>
+                            </div>
+                        {% endif %}
+                    {% empty %}
+                        <p>No upcoming vaccinations.</p>
+                    {% endfor %}
                 </div>
 
                 <!-- Recent History -->
                 <div class="schedule-list-card">
-                    <h3><i class="fas fa-check-circle"></i> Recently Completed (Past 7 Days)</h3>
+                    <h3><i class="fas fa-check-circle"></i> Recently Completed</h3>
                     
-                    <!-- Placeholder Loop for Completed Tasks -->
-                    <div class="task-item">
-                        <span>Clostridial - ID 10385</span>
-                        <span class="task-meta" style="color: #28a745;">Completed 2025-11-12</span>
-                    </div>
-                    <div class="task-item">
-                        <span>Leptospirosis - Group A</span>
-                        <span class="task-meta" style="color: #28a745;">Completed 2025-11-15</span>
-                    </div>
-                     <div class="task-item">
-                        <span>Tetanus - ID 10487</span>
-                        <span class="task-meta" style="color: #28a745;">Completed 2025-11-16</span>
-                    </div>
-                    <p style="font-size: 12px; margin-top: 15px; text-align: right; color: rgba(255, 255, 255, 0.6);">View All >></p>
+                    {% for schedule in schedules %}
+                        {% if schedule.completed %}
+                            <div class="task-item">
+                                <span>
+                                    {{ schedule.vaccine_name }} - 
+                                    {% if schedule.is_group %}
+                                        Group: {{ schedule.group_type }}
+                                    {% else %}
+                                        ID: {{ schedule.animal.animal_id }}
+                                    {% endif %}
+                                </span>
+                                <span class="task-meta" style="color: #28a745;">Completed {{ schedule.schedule_date|date:"Y-m-d" }}</span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
 
             </div>

@@ -1,0 +1,18 @@
+Species,Disease,Min_Age_Months,Dosage_Frequency,Seasonality_Logic,Booster_Rule,Mandatory_Conditions
+Cow,Foot & Mouth Disease (FMD),4,Biannual (Every 6 Months),Summer, Winter,Booster 1 month after 1st dose,All cattle
+Cow,Haemorrhagic Septicaemia (HS),6,Annual,Pre-Monsoon,None,Endemic areas only
+Cow,Black Quarter (BQ),6,Annual,Pre-Monsoon,None,Endemic areas only
+Cow,Brucellosis,4,Once Lifetime,None (Age Dependent),None,Female calves only (4-8 months)
+Cow,Lumpy Skin Disease (LSD),4,Annual,Spring,None,All cattle
+Cow,Anthrax,4,Annual,Pre-Monsoon,None,Endemic areas (soil borne)
+Cow,Theileriosis,3,Once Lifetime,None (Age Dependent),None,Exotic/Crossbred cattle only
+Sheep,PPR (Goat Plague),3,Every 3 Years,None (Campaign based),None,All Sheep
+Sheep,Sheep Pox,3,Annual,Winter,None,All Sheep
+Sheep,Enterotoxaemia (ET),4,Annual,Pre-Monsoon,Booster 14 days after 1st dose,All Sheep
+Sheep,Blue Tongue,3,Annual,Monsoon,None,All Sheep
+Sheep,Anthrax,6,Annual,Pre-Monsoon,None,Endemic areas
+Goat,PPR (Goat Plague),3,Every 3 Years,None (Campaign based),None,All Goats
+Goat,Goat Pox,3,Annual,Winter,None,All Goats
+Goat,CCPP (Pleuropneumonia),3,Annual,Winter,None,All Goats
+Goat,Enterotoxaemia (ET),4,Annual,Pre-Monsoon,Booster 14 days after 1st dose,All Goats
+Goat,FMD,4,Biannual,Summer, Winter,None,All Goats

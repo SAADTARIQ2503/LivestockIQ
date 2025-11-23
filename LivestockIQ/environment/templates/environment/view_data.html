@@ -112,11 +112,54 @@
             padding: 20px;
             width: calc(100% - 80px);
             min-height: 100vh;
-            display: flex; 
-            justify-content: center;
-            align-items: center;
+            display: flex;
+            flex-direction: column; /* Align items vertically */
+            align-items: center; /* Center horizontally */
+            padding-top: 50px;
         }
         
+        .location-search-container {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            border-radius: 5px;
+            padding: 20px;
+            color: white;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            max-width: 450px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .location-search-container form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .location-search-container input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+        }
+
+        .location-search-container button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #40c4ff;
+            color: white;
+            font-weight: 600;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .location-search-container button:hover {
+            background-color: #00b0ff;
+        }
+
         .form-card { 
             background: rgba(0, 0, 0, 0.4);  
             backdrop-filter: blur(8px);  
@@ -212,39 +255,45 @@
 
     <!-- Main Content Area: Centering the Environmental Data Card -->
     <div class="main-content">
+        <div class="location-search-container">
+            <form method="GET" action="{% url 'environment:view_data' %}">
+                <input type="text" name="location" placeholder="Enter a city name..." value="{{ request.GET.location }}">
+                <button type="submit">Search</button>
+            </form>
+        </div>
         
-        <div class="form-card">
-            <h2>Live Environmental Data ({{ location }})</h2>
-
+        <div class="form-card" id="data-container">
+            <h2>Live Environmental Data (<span id="location">{{ location }}</span>)</h2>
+            <div id="message-container" style="color: red; text-align: center; margin-bottom: 10px;"></div>
             <div class="data-grid">
                 
                 <div class="data-label">Current Season:</div>
-                <div class="data-value">{{ season }}</div>
+                <div class="data-value" id="season">{{ season }}</div>
                 
                 <div class="data-label">Outdoor Temp:</div>
-                <div class="data-value">{{ outdoor_temp_c }}°C</div>
+                <div class="data-value" id="outdoor_temp_c">{{ outdoor_temp_c }}°C</div>
                 
                 <div class="data-label">Barn Temperature:</div>
-                <div class="data-value">{{ barn_temp_c }}°C</div>
+                <div class="data-value" id="barn_temp_c">{{ barn_temp_c }}°C</div>
                 
                 <div class="data-label">Outdoor Humidity:</div>
-                <div class="data-value">{{ humidity }}%</div>
+                <div class="data-value" id="humidity">{{ humidity }}%</div>
                 
                 <div class="data-label">Wind Speed:</div>
-                <div class="data-value">{{ wind_speed }} m/s</div>
+                <div class="data-value" id="wind_speed">{{ wind_speed }} m/s</div>
 
                 <div class="data-label">Rain Chance:</div>
-                <div class="data-value">{{ rain_chance }}</div>
+                <div class="data-value" id="rain_chance">{{ rain_chance }}</div>
                 
                 <div class="data-label">Air Quality Index (AQI):</div>
-                <div class="data-value">{{ aqi }}</div>
+                <div class="data-value" id="aqi">{{ aqi }}</div>
 
                 <div class="data-label">Weather Conditions:</div>
-                <div class="data-value" style="border-bottom: none;">{{ description }}</div>
+                <div class.="data-value" style="border-bottom: none;" id="description">{{ description }}</div>
                 
                 <!-- Dynamic Status based on view logic -->
                 <div class="data-label">Risk Status:</div>
-                <div class="data-value" style="color: '{{ status_color }}'; border-bottom: none;">{{ current_status }}</div>
+                <div class="data-value" style="color: '{{ status_color }}'; border-bottom: none;" id="current_status">{{ current_status }}</div>
 
             </div>
             
@@ -254,6 +303,51 @@
             
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageContainer = document.getElementById('message-container');
+            const dataContainer = document.getElementById('data-container');
 
+            function updatePage(data) {
+                if (data.success) {
+                    document.getElementById('location').textContent = data.context.location;
+                    document.getElementById('season').textContent = data.context.season;
+                    document.getElementById('outdoor_temp_c').textContent = data.context.outdoor_temp_c + '°C';
+                    document.getElementById('barn_temp_c').textContent = data.context.barn_temp_c + '°C';
+                    document.getElementById('humidity').textContent = data.context.humidity + '%';
+                    document.getElementById('wind_speed').textContent = data.context.wind_speed + ' m/s';
+                    document.getElementById('rain_chance').textContent = data.context.rain_chance;
+                    document.getElementById('aqi').textContent = data.context.aqi;
+                    document.getElementById('description').textContent = data.context.description;
+                    const statusElement = document.getElementById('current_status');
+                    statusElement.textContent = data.context.current_status;
+                    statusElement.style.color = data.context.status_color;
+                    messageContainer.textContent = '';
+                } else {
+                    messageContainer.textContent = data.error;
+                    dataContainer.querySelectorAll('.data-value').forEach(el => el.textContent = 'N/A');
+                }
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const location = urlParams.get('location');
+            let fetchUrl = window.location.pathname + '?ajax=true';
+            if (location) {
+                fetchUrl += '&location=' + encodeURIComponent(location);
+            }
+
+
+            fetch(fetchUrl)
+                .then(response => response.json())
+                .then(data => {
+                    updatePage(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching weather data:', error);
+                    messageContainer.textContent = 'Failed to load environmental data.';
+                    dataContainer.querySelectorAll('.data-value').forEach(el => el.textContent = 'N/A');
+                });
+        });
+    </script>
 </body>
 </html>
