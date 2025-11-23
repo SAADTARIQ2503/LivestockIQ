@@ -10,16 +10,16 @@
     
     <style>
         /* Base styling */
-        body {
+        html, body {
             margin: 0;
             padding: 0;
-            /* Using the path specified in your latest context */
             background-image: url("{% static 'accounts/BgImg.jpeg' %}");
             background-size: cover;
             background-position: center;
             min-height: 100vh;
-            font-family: Arial, sans-serif;
-            color: #fff;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* Modern font stack */
+            font-size: 17px; /* Increased base font size */
+            color: white; /* Stronger white color */
             display: flex; /* Enables sidebar layout */
         }
         
@@ -27,7 +27,7 @@
         /* 1. VERTICAL NAVIGATION BAR (Sidebar) */
         /* -------------------------------------- */
         .sidebar {
-            width: 80px;
+            width: 90px; /* Slightly increased width */
             height: 100vh;
             position: fixed;
             top: 0;
@@ -35,10 +35,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 20px;
-            background: rgba(0, 0, 0, 0.4); 
-            backdrop-filter: blur(8px); 
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+            padding-top: 25px; /* Increased padding */
+            background: rgba(0, 0, 0, 0.5); /* Slightly darker background */
+            backdrop-filter: blur(10px); /* Increased blur */
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.6); /* Enhanced shadow */
             z-index: 100;
         }
 
@@ -54,22 +54,22 @@
         }
         .nav-item {
             width: 100%;
-            height: 60px;
+            height: 65px; /* Slightly increased height */
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative; 
-            margin-bottom: 20px;
+            margin-bottom: 25px; /* Increased margin */
             cursor: pointer;
             transition: background 0.2s;
         }
 
         .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1); 
+            background: rgba(255, 255, 255, 0.15); /* Slightly more visible hover */
         }
 
         .nav-item i {
-            font-size: 24px;
+            font-size: 26px; /* Increased icon size */
             color: #ffffff;
             transition: color 0.2s;
         }
@@ -78,14 +78,14 @@
         .tooltip {
             visibility: hidden;
             opacity: 0;
-            background-color: #2b0c4d; 
+            background-color: #3b1c6d; /* Slightly different color */
             color: #fff;
             text-align: center;
             border-radius: 4px;
-            padding: 5px 10px;
+            padding: 7px 12px; /* Increased padding */
             position: absolute;
             z-index: 1;
-            left: calc(100% + 15px);
+            left: calc(100% + 18px); /* Adjusted position */
             white-space: nowrap;
             transition: opacity 0.3s;
         }
@@ -103,99 +103,99 @@
             margin-top: -5px;
             border-width: 5px;
             border-style: solid;
-            border-color: transparent #2b0c4d transparent transparent;
+            border-color: transparent #3b1c6d transparent transparent;
         }
         
         /* --- MAIN CONTENT & DATA CARD --- */
         .main-content {
-            margin-left: 80px;
-            padding: 20px;
-            width: calc(100% - 80px);
+            margin-left: 90px; /* Offset content by new sidebar width */
+            padding: 30px; /* Increased padding */
+            width: calc(100% - 90px); /* Use remaining width */
             min-height: 100vh;
             display: flex;
             flex-direction: column; /* Align items vertically */
             align-items: center; /* Center horizontally */
-            padding-top: 50px;
+            padding-top: 60px; /* Increased padding */
         }
         
         .location-search-container {
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(8px);
-            border-radius: 5px;
-            padding: 20px;
+            background: rgba(0, 0, 0, 0.5); /* Slightly darker background */
+            backdrop-filter: blur(10px); /* Increased blur */
+            border-radius: 8px; /* Slightly larger border radius */
+            padding: 25px; /* Increased padding */
             color: white;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-            max-width: 450px;
+            box-shadow: 0 6px 35px rgba(0, 0, 0, 0.7); /* Enhanced shadow */
+            max-width: 500px; /* Slightly increased width */
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 25px; /* Increased margin */
         }
 
         .location-search-container form {
             display: flex;
-            gap: 10px;
+            gap: 12px; /* Increased gap */
         }
 
         .location-search-container input[type="text"] {
             flex-grow: 1;
-            padding: 10px;
-            border-radius: 3px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.1);
+            padding: 12px; /* Increased padding */
+            border-radius: 4px; /* Slightly larger border radius */
+            border: 1px solid rgba(255, 255, 255, 0.4); /* Slightly bolder border */
+            background: rgba(255, 255, 255, 0.15); /* Slightly more visible */
             color: white;
-            font-size: 16px;
+            font-size: 18px; /* Increased font size */
         }
 
         .location-search-container button {
-            padding: 10px 15px;
+            padding: 12px 18px; /* Increased padding */
             border: none;
-            background-color: #40c4ff;
-            color: white;
-            font-weight: 600;
-            border-radius: 3px;
+            background-color: #60e4ff; /* Slightly brighter color */
+            color: #333; /* Darker text for contrast */
+            font-weight: 700; /* Bolder */
+            border-radius: 4px; /* Slightly larger border radius */
             cursor: pointer;
             transition: background-color 0.2s;
         }
 
         .location-search-container button:hover {
-            background-color: #00b0ff;
+            background-color: #80f4ff; /* Lighter hover color */
         }
 
         .form-card { 
-            background: rgba(0, 0, 0, 0.4);  
-            backdrop-filter: blur(8px);  
-            border-radius: 5px; 
-            padding: 40px; 
+            background: rgba(0, 0, 0, 0.5);  /* Slightly darker background */
+            backdrop-filter: blur(10px);  /* Increased blur */
+            border-radius: 8px; /* Slightly larger border radius */
+            padding: 45px; /* Increased padding */
             color: white;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-            max-width: 450px; 
+            box-shadow: 0 6px 35px rgba(0, 0, 0, 0.7); /* Enhanced shadow */
+            max-width: 500px; /* Slightly increased width */
             width: 100%;
         }
 
         .form-card h2 {
-            font-weight: 300;
-            font-size: 24px;
+            font-weight: 400; /* Slightly bolder */
+            font-size: 28px; /* Increased font size */
             margin-top: 0;
-            margin-bottom: 30px;
+            margin-bottom: 35px; /* Increased margin */
             text-align: center;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px; /* Increased letter spacing */
         }
 
         .data-grid {
             display: grid;
             grid-template-columns: 1fr 1fr; 
-            gap: 15px 30px; 
-            font-size: 16px;
+            gap: 20px 35px; /* Increased gap */
+            font-size: 18px; /* Increased font size */
         }
 
         .data-label {
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.8); 
+            font-weight: 700; /* Bolder */
+            color: rgba(255, 255, 255, 0.9); /* Lighter color */
         }
 
         .data-value {
             text-align: right;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3); /* Slightly bolder border */
+            padding-bottom: 7px; /* Increased padding */
             font-weight: 400;
         }
         
@@ -206,16 +206,16 @@
         .form-footer {
             display: flex;
             justify-content: flex-start; 
-            margin-top: 40px;
+            margin-top: 45px; /* Increased margin */
         }
 
         .footer-link {
-            color: #40c4ff; 
+            color: #60e4ff; /* Slightly brighter color */
             text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
+            font-weight: 700; /* Bolder */
+            font-size: 18px; /* Increased font size */
             cursor: pointer;
-            padding: 5px 10px;
+            padding: 7px 12px; /* Increased padding */
             transition: color 0.2s;
         }
 
