@@ -178,6 +178,9 @@
             color: #ffda6a; /* Brighter highlight color */
         }
 
+        /* --- MAIN CONTENT & TABLES --- */
+/* ... (unchanged styles) ... */
+
         .vax-table {
             width: 100%;
             table-layout: fixed; /* Ensures columns have equal width */
@@ -188,21 +191,26 @@
             padding: 12px; /* Increased padding */
             text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Slightly bolder border */
-            word-wrap: break-word; /* Prevents long content from overflowing */
+            /* UPDATED: Using overflow-wrap for better compatibility and control */
+            overflow-wrap: break-word; /* Ensures long words wrap */
             font-size: 17px; /* Increased font size */
         }
         .vax-table th {
             background: rgba(0, 0, 0, 0.3); /* Darker background */
             font-weight: 600;
         }
-        .vax-table th:nth-child(1), .vax-table td:nth-child(1) { width: 35%; } /* Disease */
-        .vax-table th:nth-child(2), .vax-table td:nth-child(2) { width: 20%; } /* Min Age (Months) */
-        .vax-table th:nth-child(3), .vax-table td:nth-child(3) { width: 25%; } /* Frequency */
-        .vax-table th:nth-child(4), .vax-table td:nth-child(4) { width: 20%; } /* Season */
+        /* 👇 CORRECTED 5-COLUMN WIDTHS: Total 100% (25 + 20 + 15 + 20 + 20) */
+        .vax-table th:nth-child(1), .vax-table td:nth-child(1) { width: 25%; } /* Name */
+        .vax-table th:nth-child(2), .vax-table td:nth-child(2) { width: 20%; } /* Disease */
+        .vax-table th:nth-child(3), .vax-table td:nth-child(3) { width: 15%; } /* Min Age (Months) */
+        .vax-table th:nth-child(4), .vax-table td:nth-child(4) { width: 20%; } /* Frequency */
+        .vax-table th:nth-child(5), .vax-table td:nth-child(5) { width: 20%; } /* Season */
+
         .vax-table tr:hover {
             background: rgba(255, 255, 255, 0.08); /* More visible hover */
         }
-        
+
+/* ... (rest of the styles are unchanged) ... */
         .active-icon {
             color: #ffda6a !important; /* Brighter highlight color */
         }
@@ -284,6 +292,7 @@
                     <table class="vax-table">
                         <thead>
                             <tr>
+                                <th>Name</th>
                                 <th>Disease</th>
                                 <th>Min Age (Months)</th>
                                 <th>Frequency</th>
@@ -293,6 +302,7 @@
                         <tbody>
                             {% for vaccine in vaccines %}
                                 <tr>
+                                    <td>{{ vaccine.Vaccine_Name|default:"N/A" }}</td>
                                     <td>{{ vaccine.Disease|default:"N/A" }}</td>
                                     <td>{{ vaccine.Min_Age_Months|default:"N/A" }}</td>
                                     <td>{{ vaccine.Dosage_Frequency|default:"N/A" }}</td>
@@ -300,7 +310,7 @@
                                 </tr>
                             {% empty %}
                                 <tr>
-                                    <td colspan="4">No specific recommendations found for this season.</td>
+                                    <td colspan="5">No specific recommendations found for this season.</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
