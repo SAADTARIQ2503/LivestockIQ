@@ -35,10 +35,11 @@ def get_coordinates(city_name):
 
 def get_current_weather(location=None):
     """Fetches real-time environmental data from OpenWeatherMap."""
-    if not WEATHER_API_KEY or WEATHER_API_KEY == 'YOUR_OPENWEATHERMAP_KEY_HERE':
+    if not WEATHER_API_KEY :
         return {'success': False, 'error': 'API Key not configured.'}
     
-    lat, lon = FARM_LAT, FARM_LON
+    # Initialize with default/farm coordinates
+    lat, lon = float(FARM_LAT), float(FARM_LON)
     
     if location:
         geo_lat, geo_lon = get_coordinates(location)
@@ -61,6 +62,7 @@ def get_current_weather(location=None):
         return {
             'success': True,
             'city': data.get('name', location or 'Farm Location'),
+            'latitude': lat, # ADDED: Return latitude for seasonal logic
             'outdoor_temp_c': data['main']['temp'],
             'humidity': data['main']['humidity'],
             'description': data['weather'][0]['description'].capitalize(),
@@ -76,6 +78,32 @@ def get_current_weather(location=None):
         return {'success': False, 'error': 'Invalid API response format.'}
 
 
+def determine_season(latitude, current_month):
+    """
+    Determines the meteorological season based on latitude (hemisphere) and current month.
+    """
+    if latitude >= 0:
+        # Northern Hemisphere
+        if current_month in [12, 1, 2]:
+            return "Winter"
+        elif current_month in [3, 4, 5]:
+            return "Spring"
+        elif current_month in [6, 7, 8]:
+            return "Summer"
+        else: # 9, 10, 11
+            return "Autumn (Fall)"
+    else:
+        # Southern Hemisphere
+        if current_month in [12, 1, 2]:
+            return "Summer"
+        elif current_month in [3, 4, 5]:
+            return "Autumn (Fall)"
+        elif current_month in [6, 7, 8]:
+            return "Winter"
+        else: # 9, 10, 11
+            return "Spring"
+
+
 def view_data(request):
     location = request.GET.get('location')
     weather_data = get_current_weather(location)
@@ -85,21 +113,14 @@ def view_data(request):
     current_month = datetime.now().month 
     
     if weather_data['success']:
+        # 1. Get Latitude from the fetched data
+        city_latitude = weather_data['latitude'] 
+        
+        # 2. Determine the season using the new function
+        season = determine_season(city_latitude, current_month)
+        
         outdoor_temp = weather_data['outdoor_temp_c']
         
-        # --- Seasonal Logic for Pakistan (Generalized) ---
-        if current_month in [12, 1, 2]:
-            season = "Winter (Sardi)"
-        elif current_month in [3, 4]:
-            season = "Spring (Bahar)"
-        elif current_month in [5, 6]:
-            season = "Summer (Garmi)"
-        elif current_month in [7, 8]:
-            season = "Monsoon (Barsat)"
-        else: # Sept, Oct, Nov
-            season = "Autumn (Khizan)"
-        # --- End Seasonal Logic ---
-            
         # Risk assessment
         if outdoor_temp > 38 or barn_temp > 35: # Extreme heat alert
             status = "Warning (Heat Stress Risk)"

@@ -10,7 +10,7 @@
     
     <style>
         /* Base styling */
-        html, body {
+        body {
             margin: 0;
             padding: 0;
             background-image: url("{% static 'accounts/BgImg.jpeg' %}");
@@ -245,7 +245,7 @@
             <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half active-icon"></i><span class="tooltip">Environmental Data</span></a>
         </div>
         <div class="nav-item">
-            <a href="#"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
+            <a href="{% url 'alerts:anomalies' %}"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
         </div>
         <div class="nav-item">
             <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
@@ -289,7 +289,7 @@
                 <div class="data-value" id="aqi">{{ aqi }}</div>
 
                 <div class="data-label">Weather Conditions:</div>
-                <div class.="data-value" style="border-bottom: none;" id="description">{{ description }}</div>
+                <div class="data-value" id="description">{{ description }}</div>
                 
                 <!-- Dynamic Status based on view logic -->
                 <div class="data-label">Risk Status:</div>
