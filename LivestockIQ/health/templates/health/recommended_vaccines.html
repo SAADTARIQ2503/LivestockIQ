@@ -209,8 +209,17 @@
         .vax-table tr:hover {
             background: rgba(255, 255, 255, 0.08); /* More visible hover */
         }
+        
+        /* New style for vaccine link */
+        .vax-link {
+            color: #60e4ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .vax-link:hover {
+            text-decoration: underline;
+        }
 
-/* ... (rest of the styles are unchanged) ... */
         .active-icon {
             color: #ffda6a !important; /* Brighter highlight color */
         }
@@ -268,7 +277,7 @@
             <form method="GET" class="season-filter-form">
                 <label for="season-select">Filter by Season:</label>
                 <select name="season" id="season-select" onchange="this.form.submit()">
-                    <option value="">All Recommendations</option>
+                    <option value="all_recommendations">All Recommendations</option>
                     <option value="current" {% if selected_season_filter == 'current' %}selected{% endif %}>
                         Current Season ({{ current_season_name }})
                     </option>
@@ -289,6 +298,43 @@
             {% for animal_type, vaccines in recommended_data.items %}
                 <div class="data-card" style="padding: 15px; margin-bottom: 25px;">
                     <h2>{{ animal_type }}</h2>
+                    <div style="overflow-x: auto;">
+                        <table class="vax-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Disease</th>
+                                    <th>Min Age (Months)</th>
+                                    <th>Frequency</th>
+                                    <th>Season</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vaccine in vaccines %}
+                                    <tr>
+                                        <td>
+                                            <!-- LINK FIX: Generate URL for detail page -->
+                                            <a href="{% url 'health:vaccine_detail' vaccine_name_slug=vaccine.Vaccine_Name|slugify %}" class="vax-link">
+                                                {{ vaccine.Vaccine_Name|default:"N/A" }}
+                                            </a>
+                                        </td>
+                                        <td>{{ vaccine.Disease|default:"N/A" }}</td>
+                                        <td>{{ vaccine.Min_Age_Months|default:"N/A" }}</td>
+                                        <td>{{ vaccine.Dosage_Frequency|default:"N/A" }}</td>
+                                        <td>{{ vaccine.Seasonality_Logic|default:"N/A" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5">No specific recommendations found for this season.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="data-card" style="padding: 15px; margin-bottom: 25px;">
+                    <h2>No Species Data Found</h2>
                     <table class="vax-table">
                         <thead>
                             <tr>
@@ -300,24 +346,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for vaccine in vaccines %}
                                 <tr>
-                                    <td>{{ vaccine.Vaccine_Name|default:"N/A" }}</td>
-                                    <td>{{ vaccine.Disease|default:"N/A" }}</td>
-                                    <td>{{ vaccine.Min_Age_Months|default:"N/A" }}</td>
-                                    <td>{{ vaccine.Dosage_Frequency|default:"N/A" }}</td>
-                                    <td>{{ vaccine.Seasonality_Logic|default:"N/A" }}</td>
+                                    <td colspan="5">The database contains no vaccine records matching your criteria.</td>
                                 </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="5">No specific recommendations found for this season.</td>
-                                </tr>
-                            {% endfor %}
+                            
                         </tbody>
                     </table>
                 </div>
-            {% empty %}
-                <p style="text-align: center;">No recommendation data available for the selected filter.</p>
             {% endfor %}
 
             <a href="{% url 'health:vaccination_schedule' %}" class="back-link">

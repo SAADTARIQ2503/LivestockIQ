@@ -8,5 +8,6 @@ urlpatterns = [
     path('vaccine-schedule/', views.vaccination_schedule_view, name='vaccination_schedule'),
     path('recommendations/', views.recommended_vaccines_view, name='recommended_vaccines'),
     path('schedule/new/', views.schedule_form_view, name='schedule_form'),
+    path('recommendations/<str:vaccine_name_slug>/', views.vaccine_detail_view, name='vaccine_detail'),
     
 ]

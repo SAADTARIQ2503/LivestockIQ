@@ -1,18 +1,57 @@
 Species,Vaccine_Name,Disease,Min_Age_Months,Dosage_Frequency,Seasonality_Logic,Booster_Rule,Mandatory_Conditions
-Cow,FMD Polyvalent Vaccine,Foot & Mouth Disease (FMD),4,Biannual (Every 6 Months),"Summer, Winter",Booster 1 month after 1st dose,All cattle,kkk
-Cow,HS Vaccine,Haemorrhagic Septicaemia (HS),6,Annual,Pre-Monsoon,None,Endemic areas only,
-Cow,Black Quarter Vaccine,Black Quarter (BQ),6,Annual,Pre-Monsoon,None,Endemic areas only,
-Cow,Brucella Abortus Strain 19 (S19) or RB51,Brucellosis,4,Once Lifetime,None (Age Dependent),None,Female calves only (4-8 months),
-Cow,"LSD Live Attenuated Vaccine (e.g. Neethling strain)",Lumpy Skin Disease (LSD),4,Annual,Spring,None,All cattle,
-Cow,Anthrax Spore VaccineAnthrax,4,Annual,Pre-Monsoon,None,Endemic areas (soil borne),
-Cow,Theileria Annulata Vaccine (Live Attenuated),Theileriosis,3,Once Lifetime,None (Age Dependent),None,Exotic/Crossbred cattle only,
-Sheep,PPR Live Attenuated Vaccine,PPR (Goat Plague),3,Every 3 Years,None (Campaign based),None,All Sheep,
-Sheep,Sheep Pox Live Attenuated Vaccine,Sheep Pox,3,Annual,Winter,None,All Sheep,
-Sheep,Enterotoxaemia (ET) Toxoid Vaccine,Enterotoxaemia (ET),4,Annual,Pre-Monsoon,Booster 14 days after 1st dose,All Sheep,
-Sheep,Bluetongue Multivalent Vaccine,Blue Tongue,3,Annual,Monsoon,None,All Sheep,
-Sheep,Anthrax Spore Vaccine,Anthrax,6,Annual,Pre-Monsoon,None,Endemic areas,
-Goat,PPR Live Attenuated Vaccine,PPR (Goat Plague),3,Every 3 Years,None (Campaign based),None,All Goats,
-Goat,Goat Pox Live Attenuated Vaccine,Goat Pox,3,Annual,Winter,None,All Goats,
-Goat,CCPP Inactivated Vaccine,CCPP (Pleuropneumonia),3,Annual,Winter,None,All Goats,
-Goat,Enterotoxaemia (ET) Toxoid Vaccine,Enterotoxaemia (ET),4,Annual,Pre-Monsoon,Booster 14 days after 1st dose,All Goats,
-Goat,FMD Polyvalent Vaccine,FMD,4,Biannual,"Summer, Winter",None,All Goats,
+Cow,FMD Vaccine,Foot and Mouth Disease,4,Every 6 months,All year,Every 6 months,
+Cow,HS Vaccine,Haemorrhagic Septicaemia,6,Annually,Summer,Annual booster in summer,
+Cow,BQ Vaccine,Black Quarter,6,Annually,All year,Annual booster,
+Cow,Clostridial Vaccine,Clostridial infections,6,Every 6 months,All year,Every 6 months,
+Cow,Live attenuated LSD Vaccine,Lumpy Skin Disease,4,Annually,Summer,Annual booster in summer,
+Cow,Blanthrax Vaccine,Anthrax,4,Annually,Summer,Annual booster in summer,
+Cow,Muguga ITM Cocktail Vaccine,East African Coast Fever,0,Once in lifetime,All year,No booster needed,
+Cow,Rabies Vaccine,Rabies,0,After exposure,All year,After exposure only,After exposure/bite
+Cow,Combined Vaccine IBR/PI3/BVD/BRSV,Blackleg/Malignant edema/Enterotoxemia,1,Initial series,All year,Follow vaccination program,
+Cow,IBR/BVD/Parainfluenza Vaccine,Reproductive diseases,6,Annually,All year,Annual booster,
+Cow,Vaccine,Three Day Stiff Sickness,8,Annually,Summer,Annual booster in summer,
+Cow,RVF Vaccine,Rift Valley Fever,7,Annually,Summer,Annual booster in summer,
+Cow,Vibriosis Vaccine,Vibriosis,18,Annually,All year,Annual booster,Non pregnant cows
+Cow,Ultra/Coclavax one shot,Clostridial diseases,6,Annually,All year,Annual booster,
+Cow,Brucella S19,Brucellosis,4,Once in lifetime,All year,No booster needed,Female calves only at 4-8 months
+Cow,Brucella S19,Contagious abortion,4,Once in lifetime,Summer,No booster needed,Heifers only at 4 to 8 months of age
+Cow,MLV-IBR/PI3/BVD/BRSV,Blackleg/Malignant edema/Enterotoxemia,8,Initial series,All year,Follow vaccination program,Replacement heifers at 8 months
+Cow,Combined Vaccines with Lepto,Multiple diseases,12,Pre-breeding,All year,Follow breeding schedule,1 month before breeding
+Cow,IBR/BVD/Parainfluenza Vaccine,Reproductive diseases,6,Annually,All year,Annual booster,
+Cow,Scourguard Vaccine,Scourguard (To guard against scours),,Annually,All year,Before calving,Healthy pregnant cows and heifers
+Cow,Clostridial Vaccine BRSV/Pasteurella,Clostridial/BRSV/Pasteurella,1,Initial + booster,All year,As directed,If problem with summer pneumonia
+Cow,MLV-IBR/PI3/BVD/BRSV,Multiple respiratory diseases,6,At weaning,All year,Follow vaccination program,At weaning time
+Cow,MLV-IBR/PI3/BVD/BRSV,Multiple respiratory diseases,6,Post-weaning,All year,Follow vaccination program,2-3 weeks after weaning
+Goat,PPR Vaccine,PPR (Peste des Petits Ruminants),4,Every 3 years,All year,Every 3 years,
+Goat,ET Vaccine,Enterotoxaemia,3,Annually,All year,Annual booster,Initial at 3 months then annual
+Goat,Goat Pox Vaccine,Goat Pox,3,Annually,All year,Annual booster,
+Goat,FMD Vaccine,Foot & Mouth Disease,4,Every 6 months,All year,Every 6 months,
+Sheep,PPR Vaccine,PPR (Peste des Petits Ruminants),4,Every 3 years,All year,Every 3 years,
+Sheep,ET Vaccine,Enterotoxaemia,3,Annually,All year,Annual booster,Initial at 3 months then annual
+Sheep,Attenuated live virus cell culture,Sheep Pox,0,Annually,Spring & Autumn,Annual in spring or autumn,
+Sheep,Inactivated FMD Vaccine,Foot and Mouth Disease,0,Every 6 months,All year,Every 6 months,
+Cow,Theileria Annulata Vaccine (Live Attenuated),Theileriosis,3,Once in lifetime,All year,No booster needed,Exotic/crossbred Cow only
+Sheep,Bluetongue Multivalent Vaccine,Bluetongue,3,Annually,Summer,Annual booster,All sheep
+Goat,CCPP Inactivated Vaccine,CCPP (Pleuropneumonia),3,Annually,Winter,Annual booster,All goats
+Cow,Leptospirosis 5-Way Vaccine,Leptospirosis,6,Annually,All year,Annual or every 3-6 months in endemic areas,
+Cow,Trichomoniasis Vaccine,Trichomoniasis,12,Annually,All year,Before breeding season,Heifers and cows only
+Cow,Pinkeye Vaccine (Moraxella bovis),Pinkeye (IBK),2,As needed,All year,Annual or as needed before pinkeye season,Complete 3-6 weeks before pinkeye season
+Cow,E.coli Vaccine,E.coli scours prevention,12,Twice yearly,All year,Before calving,Vaccinate pregnant cows
+Cow,Haemophilus somnus Vaccine,Haemophilus somnus,6,Initial series,All year,Follow vaccination program,Risk-based
+Cow,First Defense/Bar-Guard 99,E.coli prevention,0,Once in lifetime,All year,No booster needed,Before colostrum intake
+Cow,Calf-Guard,Rota/Corona virus protection,0,Once in lifetime,All year,No booster needed,Before colostrum intake
+Cow,Inforce 3 (IBR/PI3/BRSV),Respiratory diseases,0,At weaning,All year,Follow vaccination program,Nasal product
+Cow,Mannheimia haemolytica Vaccine,Pasteurella,6,Initial series,All year,Follow vaccination program,Risk-based
+Cow,Brucellosis calfhood Vaccine,Brucellosis,8,Once in lifetime,All year,No booster needed,Only by accredited veterinarian with tag and tattoo
+Cow,Clostridial 7-way Vaccine,Clostridial diseases,12,Annually,All year,Annual booster,
+Cow,Bovine Respiratory Disease (BRD) Vaccine,Respiratory disease complex,0.5,Initial series,Autumn,Before housing,At least 2 weeks before housing
+Cow,Campylobacter fetus Vaccine,Vibriosis/Campylobacteriosis,12,Annually,Spring,Before breeding season,Breeding bulls and females
+Cow,Pre-breeding MLV Vaccine,IBR/BVD/PI3/BRSV,14,Pre-breeding,Spring,Before breeding season,At least 30 days before breeding season
+Cow,Rotavirus/Coronavirus Vaccine,Calf scours prevention,,Twice yearly,Winter,Before calving,Pregnant cows in late pregnancy
+Cow,Lungworm Vaccine,Dictyocaulus viviparus,2.5,Initial series,Spring,Follow vaccination program,Before turnout to pasture in endemic areas
+Cow,Pre-calving booster Vaccines,Multiple diseases,,Pre-calving,Winter,Before calving,Ensure colostral antibody transfer
+Cow,Breeding soundness Vaccines,IBR/BVD/Leptospirosis,12,Annually,Spring,Annual booster,Given 60-75 days before bull turnout
+Cow,Replacement heifer complete,IBR/BVD/PI3/BRSV/Lepto/Vibrio,12,Pre-breeding,Spring,Before breeding season,Two doses 3 weeks apart before first breeding
+Cow,Fall vaccination program,IBR/BVD/Lepto,,Annually,Autumn,Annual booster,Given at fall pregnancy check in autumn
+Cow,Pre-housing respiratory Vaccines,IBR/PI3/BRSV/Mannheimia,7,Pre-housing,Autumn,Before housing,Protection against winter respiratory disease
+Cow,Deworming program,Parasite control,12,Twice yearly,Spring,Spring (May) and optional fall,At least 2 weeks before breeding

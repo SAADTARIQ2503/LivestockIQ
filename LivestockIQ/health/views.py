@@ -7,6 +7,7 @@ from .models import VaccinationSchedule
 from animals.models import Animal
 from django.views.decorators.http import require_http_methods
 import json
+from django.utils.text import slugify
 
 # Define a broader set of seasons for display and ordering.
 # This list is for UI display and general classification, not direct CSV matching
@@ -60,7 +61,7 @@ def recommended_vaccines_view(request):
     combined_available_seasons = ALL_DISPLAY_SEASONS[:] # Create a copy
 
     current_season = _get_current_season()
-    selected_filter_option = request.GET.get('season')
+    selected_filter_option = request.GET.get('season','current')
 
     # Filtering Logic based on selected_filter_option
     final_filtered_data = []
@@ -172,3 +173,42 @@ def vaccination_schedule_view(request):
     schedules = VaccinationSchedule.objects.all().order_by('schedule_date')
     context = {'schedules': schedules}
     return render(request, 'health/vaccination_schedule.html', context)
+def vaccine_detail_view(request, vaccine_name_slug):
+    """
+    View to show detailed information for a specific vaccine based on its slugified name.
+    """
+    csv_file_path = os.path.join(
+        os.path.dirname(__file__), 'dataset', 'vaccine_dataset.csv'
+    )
+    
+    vaccine_data = []
+    try:
+        with open(csv_file_path, mode='r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                # Include all fields, including 'Disease'
+                vaccine_data.append(row)
+    except FileNotFoundError:
+        # Handle case where CSV is not found
+        pass # Or render an error page
+    
+    
+    # 1. Look for the vaccine matching the slug
+    found_vaccine = None
+    for vaccine in vaccine_data:
+        if slugify(vaccine.get('Vaccine_Name', '')) == vaccine_name_slug:
+            found_vaccine = vaccine
+            break
+
+    if not found_vaccine:
+        # Simple handler if the vaccine is not found
+        # In a real app, you would render a 404 page
+        return render(request, 'health/recommended_vaccines.html', {
+            'error_message': f"Vaccine '{vaccine_name_slug}' not found.",
+            'recommended_data': {}
+        })
+
+    context = {
+        'vaccine': found_vaccine
+    }
+    return render(request, 'health/vaccine_detail.html', context)
