@@ -1,4 +1,6 @@
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 # Placeholder Data for Anomalies (Simulating CV Model Output)
 # This data is now local to the 'alerts' app.
@@ -40,7 +42,7 @@ ANOMALY_DATA = [
         'action': 'Could be competition or early illness. Review historical location data. No immediate action.',
     },
 ]
-
+@login_required
 def anomalies_view(request):
     """View to list all animals currently flagged with behavioral anomalies."""
     context = {
@@ -49,7 +51,7 @@ def anomalies_view(request):
     }
     # Template path is now alerts/anomalies.html
     return render(request, 'anomalies.html', context)
-
+@login_required
 def anomaly_detail_view(request, anomaly_id):
     """View to show detailed information for a specific anomaly."""
     anomaly = next((item for item in ANOMALY_DATA if item['id'] == anomaly_id), None)

@@ -23,12 +23,12 @@
 
         .signup-container {
             
-            background: rgba(0, 0, 0, 0.4); /* Semi-transparent dark background */
-            backdrop-filter: blur(8px); /* Blur effect on the background behind the element */
+            background: rgba(0, 0, 0, 0.4); 
+            backdrop-filter: blur(8px); 
             padding: 40px;
-            border-radius: 5px; /* Subtle rounding */
-            width: 350px; /* Set a fixed width */
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+            border-radius: 5px; 
+            width: 350px; 
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); 
         }
 
         .signup-container h2 {
@@ -50,7 +50,7 @@
             padding: 8px 0;
             background: transparent;
             border: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.7); /* Lighter line for input */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.7); 
             outline: none;
             color: #fff;
             font-size: 16px;
@@ -66,12 +66,12 @@
             font-size: 16px;
         }
 
-        /* Move label up when input is focused or has content */
+        
         .input-group input:focus ~ label,
         .input-group input:not(:placeholder-shown) ~ label {
             top: -20px;
             font-size: 12px;
-            color: #fff; /* Make it pure white when focused */
+            color: #fff; 
         }
         
         .input-group input:-webkit-autofill,
@@ -89,7 +89,6 @@
             cursor: pointer;
             font-size: 16px;
             letter-spacing: 1px;
-            /* Closely match the dark purple color in the image */
             background: #2b0c4d; 
             color: #fff;
             transition: background 0.3s;
@@ -97,6 +96,37 @@
 
         .signup-button:hover {
             background: #471d79;
+        }
+        
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; 
+            margin-top: 25px; 
+            margin-bottom: 25px; 
+        }
+        
+       
+        .no-account-text {
+            color: rgba(255, 255, 255, 0.7); 
+            font-size: 14px;
+            font-weight: 300;
+        }
+
+        
+        .signup-link {
+            color: #60e4ff; 
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px; 
+            padding: 5px 10px;
+            border-radius: 3px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .signup-link:hover {
+            color: #fff;
+            background-color: rgba(96, 228, 255, 0.1); 
         }
     </style>
 </head>
@@ -127,7 +157,10 @@
                 <input type="password" name="password2" id="password2" required placeholder=" ">
                 <label for="password2">Confirm Password</label>
             </div>
-            
+            <div class="form-footer">
+                <span class="no-account-text">Already have an account?</span>
+                <a href="{% url 'accounts:signin' %}" class="signup-link">Log In</a>
+            </div>
             <button type="submit" class="signup-button">Sign Up</button>
         </form>
     </div>

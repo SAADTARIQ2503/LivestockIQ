@@ -8,6 +8,9 @@ from animals.models import Animal
 from django.views.decorators.http import require_http_methods
 import json
 from django.utils.text import slugify
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+
 
 # Define a broader set of seasons for display and ordering.
 # This list is for UI display and general classification, not direct CSV matching
@@ -35,6 +38,7 @@ def _get_current_season():
     else: # Sept, Oct, Nov
         return "Autumn"
 
+@login_required
 def recommended_vaccines_view(request):
     """
     View to show a recommended list of vaccines based on animal type,
@@ -111,7 +115,7 @@ def recommended_vaccines_view(request):
     }
     return render(request, 'health/recommended_vaccines.html', context)
 
-
+@login_required
 @require_http_methods(["GET", "POST"])
 def schedule_form_view(request):
     """View to display the form for scheduling individual or group vaccinations."""
@@ -169,10 +173,13 @@ def schedule_form_view(request):
 
     return render(request, 'health/schedule_form.html')
 
+@login_required
 def vaccination_schedule_view(request):
     schedules = VaccinationSchedule.objects.all().order_by('schedule_date')
     context = {'schedules': schedules}
     return render(request, 'health/vaccination_schedule.html', context)
+
+@login_required
 def vaccine_detail_view(request, vaccine_name_slug):
     """
     View to show detailed information for a specific vaccine based on its slugified name.

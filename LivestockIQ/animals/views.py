@@ -4,7 +4,9 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.db.models import Q 
 from .models import Animal 
-
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+@login_required
 @csrf_exempt
 def add_animal(request):
     if request.method == 'POST':
@@ -51,7 +53,7 @@ def add_animal(request):
         return render(request, 'add_animal.html')
 
 def search_animal(request):
-    animals = Animal.objects.none()  # Start with an empty queryset
+    animals = Animal.objects.none()  
     query_set = {}
 
     try:
@@ -61,6 +63,17 @@ def search_animal(request):
 
             animal_id = request.POST.get('animal_id')
             if animal_id:
+                filters &= Q(animal_type__icontains=animal_type)
+                query_set['Type'] = animal_type
+            
+            sex = request.POST.get('sex')
+            if sex:
+                filters &= Q(sex__iexact=sex)
+                query_set['Sex'] = sex
+            
+            age = request.POST.get('age')
+            if age:
+                filters &= Q(age__exact=age)
                 filters &= Q(animal_id__icontains=animal_id)
                 query_set['Animal ID'] = animal_id
 

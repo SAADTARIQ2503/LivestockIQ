@@ -6,17 +6,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LivestockIQ Home</title>
-    <!-- CORRECTION: Updated Font Awesome link to a standard, reliable CDN for v6 -->
+    <!-- Font Awesome for Icons (using v6 standard CDN link) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
         xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMDJ8uR0FMOQo2T8Y897E9uE9h/u0F9+5W1E9sW9uC1F1C1W1X1C1W1W1W1C1W1"
         crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
     <style>
         /* Base styling */
         body {
             margin: 0;
             padding: 0;
-            /* Standardized path */
             background-image: url("{% static 'accounts/BgImg.jpeg' %}");
             background-size: cover;
             background-position: center;
@@ -34,7 +34,6 @@
             top: 20px;
             right: 20px;
             z-index: 2000;
-            /* Ensure it floats above everything */
             width: 350px;
         }
 
@@ -98,9 +97,7 @@
             flex-direction: column;
             align-items: center;
             padding-top: 20px;
-            /* Semi-transparent dark background (matching Login/Signup card) */
             background: rgba(0, 0, 0, 0.4);
-            /* Blur effect */
             backdrop-filter: blur(8px);
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
             z-index: 100;
@@ -125,7 +122,6 @@
             justify-content: center;
             align-items: center;
             position: relative;
-            /* Needed for tooltip positioning */
             margin-bottom: 20px;
             cursor: pointer;
             transition: background 0.2s;
@@ -149,7 +145,6 @@
             visibility: hidden;
             opacity: 0;
             background-color: #2b0c4d;
-            /* Dark purple tooltip background */
             color: #fff;
             text-align: center;
             border-radius: 4px;
@@ -183,10 +178,8 @@
         /* -------------------------------------- */
         .main-content {
             margin-left: 80px;
-            /* Offset content by sidebar width */
             padding: 20px;
             width: 100%;
-            /* Semi-transparent background for the main content area */
             background: rgba(0, 0, 0, 0.1);
         }
 
@@ -197,17 +190,130 @@
             border-radius: 5px;
             margin-bottom: 20px;
             text-align: center;
+            position: relative;
+        }
+        .logout-button {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            padding: 8px 15px;
+            background-color: #dc3545; /* Red for emphasis/action */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .logout-button:hover {
+            background-color: #c82333;
+            transform: translateY(-1px);
         }
 
         .active-icon {
             color: #ffc107 !important;
         }
+        .tabs {
+            background: rgb(0, 0, 0, 0.45);
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+            transition: color 0.3s, border-bottom 0.3s;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .tab-button:hover {
+            color: #fff;
+        }
+
+        .tab-button.active {
+            color: #ffc107;
+            border-bottom: 3px solid #ffc107;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 10px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Adjusted min-width for charts */
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(3px);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            min-height: 250px; 
+            max-height: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Chart container inside the card to ensure aspect ratio */
+        .chart-container {
+            position: relative;
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.4); 
+            border-radius: 4px; 
+            padding: 10px; 
+        }
+
+        
+        .chart-container canvas {
+            background-color: transparent; 
+            max-height: 250px;
+        }
+
+        .chart-card h3 {
+            margin-top: 0;
+            color: #ffc107;
+            font-size: 1.2em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .chart-placeholder {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            padding: 10px;
+        }        
     </style>
 </head>
 
 <body>
 
-    <!-- MESSAGE CONTAINER (NEW) -->
+    
     <div class="message-container">
         {% if messages %}
         {% for message in messages %}
@@ -258,21 +364,203 @@
     <!-- Main Content Area -->
     <div class="main-content">
         <div class="dashboard-header">
+            <a href="{% url 'accounts:logout' %}" class="logout-button">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </a>
             <h1>Welcome to LivestockIQ Dashboard</h1>
             <p>Monitor your herd's health and environment.</p>
         </div>
-
-        <!-- Placeholder for Dashboard Content -->
+        
         <div
-            style="background: rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 5px; min-height: 400px; text-align: center; color: #f0f0f0;">
-            <p>Your key metrics and real-time data will appear here.</p>
-            <p style="margin-top: 50px;">Today's Summary: Healthy Herd Count: 104 | Pending Vaccinations: 5 | Critical
-                Anomalies: 1</p>
+            style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center; color: #f0f0f0; font-size: 1.1em;">
+            <p style="margin: 0;">**Today's Summary:** **Healthy Herd Count:** 104 | **Pending Vaccinations:** 5 |
+                **Critical Anomalies:** 1</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab(event, 'HerdHealth')">Herd Health</button>
+            <button class="tab-button" onclick="openTab(event, 'Environment')">Environment</button>
+            <button class="tab-button" onclick="openTab(event, 'Logistics')">Logistics</button>
+        </div>
+
+        <div id="HerdHealth" class="tab-content active">
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3>Vaccination Status (Total Herd)</h3>
+                    <div class="chart-container">
+                        <canvas id="vaccinationChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Mortality Count by Type (Last 30 Days)</h3>
+                    <div class="chart-container">
+                        <canvas id="mortalityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Average Weight Trend (Last 6 Months)</h3>
+                    <div class="chart-placeholder">
+                        *Placeholder for a Line Graph: Average Weight (Kg) over Time*
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Top 5 Reported Health Issues</h3>
+                    <div class="chart-placeholder">
+                        *Placeholder for a Horizontal Bar Chart: Issue Frequency*
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="Environment" class="tab-content">
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3>Past 7 Days Temperature (°C)</h3>
+                    <div class="chart-placeholder">
+                        *Placeholder for a Line Graph: Daily Max/Min Temperature*
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Humidity Level Distribution</h3>
+                    <div class="chart-placeholder">
+                        *Placeholder for a Scatter Plot: Humidity vs. Health Anomaly Count*
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="Logistics" class="tab-content">
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3>Current Feed Stock (Days Remaining)</h3>
+                    <div class="chart-placeholder">
+                        *Placeholder for a Gauge Chart/Indicator: Hay, Grain, Supplements*
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Weekly Task Completion Rate</h3>
+                    <div class="chart-placeholder">
+                        *Placeholder for a Progress Bar/Pie Chart: Tasks Completed vs. Pending*
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Auto-hide messages after 5 seconds (NEW) -->
     <script>
+        // Safely parse JSON data passed from Django View
+        // filter |escapejs ensures the JSON string is safe to embed in JS
+        const vaccinationData = JSON.parse('{{ vaccination_data_json|escapejs|safe }}');
+        const mortalityData = JSON.parse('{{ mortality_data_json|escapejs|safe }}');
+        document.addEventListener('DOMContentLoaded', function () {
+        // --- CHART 1: DOUGHNUT CHART (Vaccination Status) ---
+        new Chart(document.getElementById('vaccinationChart'), {
+            type: 'doughnut',
+            data: {
+                labels: vaccinationData.labels,
+                datasets: [{
+                    data: vaccinationData.data,
+                    backgroundColor: vaccinationData.colors,
+                    borderColor: 'rgba(0, 0, 0, 0.4)',
+                    borderWidth: 2,
+                    hoverOffset: 10
+                }]  
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff', // White legend text
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += context.parsed + ' animals';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- CHART 2: BAR CHART (Mortality Rate) ---
+        new Chart(document.getElementById('mortalityChart'), {
+            type: 'bar',
+            data: {
+                labels: mortalityData.labels,
+                datasets: [{
+                    label: 'Mortality Count',
+                    data: mortalityData.data,
+                    backgroundColor: mortalityData.colors,
+                    borderColor: '#ffffff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Count',
+                            color: '#fff'
+                        },
+                        ticks: {
+                            color: '#ccc',
+                            stepSize: 1
+                        },
+                        grid: {
+                             color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#ccc'
+                        },
+                        grid: {
+                             color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            }
+        });
+        console.log(vaccinationData);
+console.log(mortalityData);
+        setTimeout(() => {
+             document.querySelector('.tab-button').click();
+        }, 100);
+    });
+
+        // Auto-hide messages after 5 seconds
         document.addEventListener('DOMContentLoaded', function () {
             const messages = document.querySelectorAll('.message-toast');
             if (messages.length > 0) {
@@ -284,6 +572,36 @@
                     }, 5000);
                 });
             }
+        });
+
+        // Tab Switching Script
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+
+            // Hide all tab content
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+
+            // Remove 'active' class from all buttons
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            // Show the current tab, and add an "active" class to the button
+            document.getElementById(tabName).style.display = "grid"; // Use grid to show content, matching CSS
+            evt.currentTarget.className += " active";
+        }
+
+        // Set the default active tab on load
+        document.addEventListener('DOMContentLoaded', function () {
+            // Wait for charts to render by using a slight delay
+            setTimeout(() => {
+                 // Trigger a click on the first tab to initialize the view
+                 document.querySelector('.tab-button').click();
+            }, 100);
         });
     </script>
 </body>

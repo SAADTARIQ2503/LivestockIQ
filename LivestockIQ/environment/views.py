@@ -4,9 +4,11 @@ import requests
 import os
 from datetime import datetime
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
-# --- Secure Access ---
-# Access the key from settings.py (which pulls from .env)
+
+
 WEATHER_API_KEY = settings.API_KEYS.get('OPENWEATHERMAP')
 # Access coordinates directly from environment variables as a fallback
 FARM_LAT = os.environ.get('FARM_LATITUDE', '34.0522')
@@ -62,12 +64,12 @@ def get_current_weather(location=None):
         return {
             'success': True,
             'city': data.get('name', location or 'Farm Location'),
-            'latitude': lat, # ADDED: Return latitude for seasonal logic
+            'latitude': lat, 
             'outdoor_temp_c': data['main']['temp'],
             'humidity': data['main']['humidity'],
             'description': data['weather'][0]['description'].capitalize(),
             'rain_chance': 'High' if rain_volume > 0.5 else 'Low',
-            'aqi': 100, # Placeholder
+            'aqi': 100, 
             'wind_speed': data['wind']['speed']
         }
     except requests.exceptions.RequestException as e:
@@ -103,13 +105,13 @@ def determine_season(latitude, current_month):
         else: # 9, 10, 11
             return "Spring"
 
-
+@login_required
 def view_data(request):
     location = request.GET.get('location')
     weather_data = get_current_weather(location)
     barn_temp = 25 # Placeholder for barn data
     
-    # Get current month (1-12) for seasonal determination
+    
     current_month = datetime.now().month 
     
     if weather_data['success']:

@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Livestock</title>
-    <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMDJ8uR0FMOQo2T8Y897E9uE9h/u0F9+5W1E9sW9uC1F1C1W1X1C1W1W1W1C1W1" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     <style>
@@ -21,7 +20,7 @@
             color: #fff;
             display: flex;
         }
-        
+       
         /* --- SIDEBAR STYLING (Unchanged from previous files) --- */
         .sidebar {
             width: 80px;
@@ -141,7 +140,15 @@
             color: rgba(255, 255, 255, 0.7);
         }
 
-        .form-group input {
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .form-group input,
+        .form-group select { 
             width: 100%;
             padding: 8px 10px;
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -149,6 +156,19 @@
             color: #fff;
             border-radius: 3px;
             box-sizing: border-box;
+            appearance: none; 
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255, 255, 255, 0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 30px; 
+        }
+        
+       
+        .form-group select option {
+            background: #000;
+            color: #fff;
         }
 
         .search-btn {
@@ -187,7 +207,7 @@
         .results-table th {
             background: rgba(0, 0, 0, 0.2);
             font-weight: 600;
-            color: #ffc107; /* Highlighted text for headers */
+            color: #ffc107; 
         }
         
         /* Style for applied filters */
@@ -201,20 +221,60 @@
             margin-bottom: 8px;
         }
         
-        /* Style for Message/Error display */
-        .message {
-            padding: 15px;
-            margin-bottom: 15px;
+        
+        .message-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            width: 350px;
+        }
+
+        .message-toast {
+            padding: 15px 20px;
+            margin-bottom: 10px;
             border-radius: 5px;
-            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            font-weight: 600;
+            color: #fff;
+            animation: slideIn 0.5s ease-out;
+            opacity: 0.95;
+            backdrop-filter: blur(5px);
+            border-left: 5px solid; 
         }
-        .message.error {
-            background-color: #dc3545;
+
+        .message-toast.success {
+            background: rgba(40, 167, 69, 0.8);
+            border-left-color: #28a745;
         }
-        .message.info {
-            background-color: #ffc107;
+
+        .message-toast.error {
+            background: rgba(220, 53, 69, 0.8);
+            border-left-color: #dc3545;
+        }
+
+        .message-toast.warning {
+            background: rgba(255, 193, 7, 0.8);
             color: #333;
+            border-left-color: #ffc107;
         }
+
+        .message-toast i {
+            margin-right: 10px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 0.95;
+            }
+        }
+
 
         /* Responsive adjustments for the table */
         @media (max-width: 600px) {
@@ -253,7 +313,6 @@
 
 <body>
 
-    <!-- Vertical Navigation Bar -->
     <div class="sidebar">
         
         <div class="nav-item">
@@ -277,19 +336,27 @@
         
     </div>
 
-    <!-- Main Content Area -->
     <div class="main-content">
 
-        <!-- Display Django Messages (Errors, Info, Success) -->
-        {% if messages %}
+        {% comment %} {% if messages %}
             {% for message in messages %}
                 <div class="message {{ message.tags }}">
                     {{ message }}
                 </div>
             {% endfor %}
-        {% endif %}
+        {% endif %} {% endcomment %}
+        <div class="message-container">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="message-toast {{ message.tags }}" role="alert">
+                <i
+                    class="fas fa-{% if 'success' in message.tags %}check-circle{% elif 'error' in message.tags %}times-circle{% else %}exclamation-triangle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
 
-        <!-- Search Form Card -->
         <div class="search-container">
             <h1>Search Livestock</h1>
             <form method="POST" class="search-form">
@@ -302,12 +369,21 @@
 
                 <div class="form-group">
                     <label for="type">Type</label>
-                    <input type="text" id="type" name="type" placeholder="e.g., Jersey">
+                    <select id="type" name="type" class="form-control">
+                        <option value="">Any Type</option>
+                        <option value="cow">Cow</option>
+                        <option value="goat">Goat</option>
+                        <option value="sheep">Sheep</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="sex">Sex (M/F)</label>
-                    <input type="text" id="sex" name="sex" placeholder="M or F">
+                    <label for="sex">Sex</label>
+                    <select id="sex" name="sex" class="form-control">
+                        <option value="">Any Sex</option>
+                        <option value="M">Male (M)</option>
+                        <option value="F">Female (F)</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -331,13 +407,12 @@
             </form>
         </div>
 
-        <!-- Results Card -->
         <div class="results-container">
             <h2>Search Results ({{ animals|length }} Found)</h2>
             
             {% if filters %}
                 <p style="font-size: 14px; margin-bottom: 15px;">
-                    **Active Filters:** {% for key, value in filters.items %}
+                    <b>Active Filters:</b> {% for key, value in filters.items %}
                         <span class="filter-badge">{{ key }}: {{ value }}</span>
                     {% endfor %}
                 </p>

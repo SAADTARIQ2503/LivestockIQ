@@ -27,7 +27,7 @@
         /* 1. VERTICAL NAVIGATION BAR (Sidebar) */
         /* -------------------------------------- */
         .sidebar {
-            width: 90px; /* Slightly increased width */
+            width: 80px; 
             height: 100vh;
             position: fixed;
             top: 0;
@@ -35,10 +35,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 25px; /* Increased padding */
-            background: rgba(0, 0, 0, 0.5); /* Slightly darker background */
-            backdrop-filter: blur(10px); /* Increased blur */
-            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.6); /* Enhanced shadow */
+            padding-top: 20px; 
+            background: rgba(0, 0, 0, 0.4); 
+            backdrop-filter: blur(8px); 
+            box-shadow: 3px 0 10px rgba(0, 0, 0, 0.6); 
             z-index: 100;
         }
 
@@ -54,38 +54,39 @@
         }
         .nav-item {
             width: 100%;
-            height: 65px; /* Slightly increased height */
+            height: 60px; 
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative; 
-            margin-bottom: 25px; /* Increased margin */
+            margin-bottom: 20px; 
             cursor: pointer;
             transition: background 0.2s;
         }
 
         .nav-item:hover {
-            background: rgba(255, 255, 255, 0.15); /* Slightly more visible hover */
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .nav-item i {
-            font-size: 26px; /* Increased icon size */
+            font-size: 24px; 
             color: #ffffff;
             transition: color 0.2s;
         }
 
         /* Tooltip Styling */
         .tooltip {
-            visibility: hidden;
+            visibility: hidden;25px
             opacity: 0;
-            background-color: #3b1c6d; /* Slightly different color */
+            background-color: #2b0c4d;
+            /* Dark purple tooltip background */
             color: #fff;
             text-align: center;
             border-radius: 4px;
-            padding: 7px 12px; /* Increased padding */
+            padding: 5px 10px;
             position: absolute;
             z-index: 1;
-            left: calc(100% + 18px); /* Adjusted position */
+            left: calc(100% + 15px);
             white-space: nowrap;
             transition: opacity 0.3s;
         }
@@ -218,25 +219,25 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 35px; /* Increased margin */
-            padding: 10px 0; /* Increased padding */
+            margin-bottom: 35px; 
+            padding: 10px 0; 
         }
 
         .upload-text {
-            font-size: 18px; /* Increased font size */
-            color: rgba(255, 255, 255, 0.9); /* Lighter color */
+            font-size: 18px; 
+            color: rgba(255, 255, 255, 0.9); 
         }
         
         .upload-button {
-            /* Dark purple button styling */
-            background-color: #3b1c6d; /* Slightly different color */
+            
+            background-color: #3b1c6d; 
             color: white;
             border: none;
-            padding: 12px 30px; /* Increased padding */
+            padding: 12px 30px; 
             cursor: pointer; 
-            border-radius: 3px; /* Slightly larger radius */
-            font-size: 16px; /* Increased font size */
-            letter-spacing: 1.2px; /* Adjusted letter spacing */
+            border-radius: 3px; 
+            font-size: 16px; 
+            letter-spacing: 1.2px; 
             transition: background 0.3s;
         }
 
@@ -348,16 +349,15 @@
 
                 <div class="form-footer">
                     <!-- CORRECTED: Back button using the namespaced URL -->
-                    <a href="{% url 'accounts:home' %}" class="footer-link">Back</a>
+                    <a href="{% url 'accounts:home' %}" class="upload-button" style="text-decoration: none;">Back</a>
                     
                     <!-- Done button should submit the form -->
-                    <button type="submit" class="footer-link" style="background: none; border: none; padding: 0; color: inherit; cursor: pointer;">Done</button>
+                    <button type="submit" class="upload-button" >Add Animal</button>
                 </div>
             </form>
         </div>
     </div>
-
-    <script>
+<script>
         const ageRanges = {
             'Cow': [
                 '0–6 months',
@@ -368,7 +368,7 @@
             'Sheep': [
                 '0–12 months',
                 '1–1.5 years',
-                '1.5 years'
+                '1.5+ years' // Corrected typo in the prompt's data from '1.5 years'
             ],
             'Goat': [
                 '0–6 months',
@@ -380,12 +380,14 @@
         const animalTypeSelect = document.querySelector('select[name="type"]');
         const ageSelect = document.getElementById('age-select');
 
-        animalTypeSelect.addEventListener('change', (event) => {
-            const animalType = event.target.value;
+        // Function to populate the age dropdown
+        function populateAgeDropdown() {
+            const animalType = animalTypeSelect.value;
+            // Use the ages array, or an empty array if no type is selected
             const ages = ageRanges[animalType] || [];
 
-            // Clear existing options
-            ageSelect.innerHTML = '<option value="" disabled selected hidden>Select age range</option>';
+            // Clear existing options, but keep the initial placeholder option
+            ageSelect.innerHTML = '<option value="" disabled selected hidden> </option>';
 
             // Add new options
             ages.forEach(age => {
@@ -394,34 +396,51 @@
                 option.textContent = age;
                 ageSelect.appendChild(option);
             });
-        });
+        }
+        
+        // 1. Attach the change event listener to the Type select
+        animalTypeSelect.addEventListener('change', populateAgeDropdown);
+        
+        // 2. IMPORTANT: If a value is already selected (e.g., from browser autofill or cache),
+        // manually call the function on page load to populate the Age field immediately.
+        document.addEventListener('DOMContentLoaded', () => {
+             // If a type is somehow selected on load, populate the ages.
+             if (animalTypeSelect.value) {
+                populateAgeDropdown();
+             }
+             
+             // --- Original AJAX submission listener (kept for context) ---
+             document.getElementById('add-animal-form').addEventListener('submit', function(event) {
+                 event.preventDefault();
 
-        document.getElementById('add-animal-form').addEventListener('submit', function(event) {
-            event.preventDefault();
+                 const form = event.target;
+                 const formData = new FormData(form);
+                 const messageContainer = document.getElementById('message-container');
 
-            const form = event.target;
-            const formData = new FormData(form);
-            const messageContainer = document.getElementById('message-container');
-
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                messageContainer.innerHTML = `<p style="color: ${data.status === 'success' ? 'lightgreen' : 'salmon'};">${data.message}</p>`;
-                if (data.status === 'success') {
-                    form.reset();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                messageContainer.innerHTML = `<p style="color: salmon;">An unexpected error occurred.</p>`;
-            });
+                 fetch(form.action, {
+                     method: 'POST',
+                     body: formData,
+                     headers: {
+                         'X-Requested-With': 'XMLHttpRequest'
+                     }
+                 })
+                 .then(response => response.json())
+                 .then(data => {
+                     messageContainer.innerHTML = `<p style="color: ${data.status === 'success' ? 'lightgreen' : 'salmon'};">${data.message}</p>`;
+                     if (data.status === 'success') {
+                         form.reset();
+                         // CRITICAL: Reset the age dropdown after form submission
+                         ageSelect.innerHTML = '<option value="" disabled selected hidden> </option>';
+                         animalTypeSelect.value = ""; // Clear the animal type selection as well
+                     }
+                 })
+                 .catch(error => {
+                     console.error('Error:', error);
+                     messageContainer.innerHTML = `<p style="color: salmon;">An unexpected error occurred.</p>`;
+                 });
+             });
         });
     </script>
+
 </body>
 </html>
