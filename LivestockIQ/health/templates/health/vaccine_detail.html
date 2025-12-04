@@ -219,53 +219,53 @@
         <div class="data-card">
             
             <div class="report-header">
-                <h1>{{ vaccine.Vaccine_Name|default:"Unknown Vaccine" }}</h1>
-                <p>Recommended for: {{ vaccine.Species }}</p>
+                <h1>{{ vaccine.vaccine_name|default:"Unknown Vaccine" }}</h1>
+                <p>Recommended for: {{ vaccine.species }}</p>
             </div>
             
             <div class="detail-grid">
                 
                 <div class="detail-item">
                     <strong>Target Disease</strong>
-                    <span>{{ vaccine.Disease|default:"Not Specified" }}</span>
+                    <span>{{ vaccine.disease|default:"Not Specified" }}</span>
                 </div>
                 
                 <div class="detail-item">
                     <strong>Minimum Age</strong>
-                    <span>{% if vaccine.Min_Age_Months %}{{ vaccine.Min_Age_Months }} Months{% else %}N/A{% endif %}</span>
+                    <span>{% if vaccine.min_age_months %}{{ vaccine.min_age_months }} Months{% else %}N/A{% endif %}</span>
                 </div>
                 
                 <div class="detail-item">
                     <strong>Primary Frequency</strong>
-                    <span>{{ vaccine.Dosage_Frequency|default:"Not Specified" }}</span>
+                    <span>{{ vaccine.dosage_frequency|default:"Not Specified" }}</span>
                 </div>
                 
                 <div class="detail-item">
                     <strong>Booster Rule</strong>
-                    <span>{{ vaccine.Booster_Rule|default:"None Required" }}</span>
+                    <span>{{ vaccine.booster_rule|default:"None Required" }}</span>
                 </div>
                 
                 <div class="detail-item">
                     <strong>Seasons</strong>
-                    <span>{{ vaccine.Seasonality_Logic|default:"All Year" }}</span>
+                    <span>{{ vaccine.seasonality_logic|default:"All Year" }}</span>
                 </div>
                 
-                {% if vaccine.Mandatory_Conditions %}
+                {% if vaccine.mandatory_conditions %}
                     <div class="mandatory-conditions">
                         <strong>Mandatory Conditions:</strong>
-                        <p>{{ vaccine.Mandatory_Conditions }}</p>
+                        <p>{{ vaccine.mandatory_conditions }}</p>
                     </div>
                 {% endif %}
                 
-                <div class="detail-item">
+                {% comment %} <div class="detail-item">
                     <strong>Administration Type </strong>
                     <span>Injected / Oral (Varies)</span>
-                </div>
+                </div> {% endcomment %}
                 
-                <div class="detail-item">
+                {% comment %} <div class="detail-item">
                     <strong>Recommended Timeframe </strong>
                     <span>Pre-Calving / Pre-Breeding (Varies)</span>
-                </div>
+                </div> {% endcomment %}
                 
             </div>
             

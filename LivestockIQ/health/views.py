@@ -1,28 +1,22 @@
-import csv
 import os
 from datetime import datetime
 from django.shortcuts import render
 from django.http import JsonResponse
-from .models import VaccinationSchedule
+from .models import VaccinationSchedule, VaccineDataset
 from animals.models import Animal
 from django.views.decorators.http import require_http_methods
 import json
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
 
+# ... (Keep your existing seasons lists and _get_current_season function here) ...
 
-# Define a broader set of seasons for display and ordering.
-# This list is for UI display and general classification, not direct CSV matching
-# The CSV's 'Seasonality_Logic' column has varied strings.
 ALL_DISPLAY_SEASONS = [
     "Winter", "Spring", "Summer",
     "Pre-Monsoon", "Autumn"
 ]
 
-# Indicators in 'Seasonality_Logic' column that mean a vaccine is NOT seasonal
 NON_SEASONAL_INDICATORS = ["None", "None (Age Dependent)", "Once in a Lifetime"]
-
 
 def _get_current_season():
     """Determines the current season based on the month."""
@@ -45,56 +39,44 @@ def recommended_vaccines_view(request):
     filtered by season.
     """
     
-    csv_file_path = os.path.join(
-        os.path.dirname(__file__), 'dataset', 'vaccine_dataset.csv'
-    )
+    # Fetch all records from the database
+    vaccine_data = list(VaccineDataset.objects.all().values())
     
-    vaccine_data = []
-    try:
-        with open(csv_file_path, mode='r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                # Include all fields, including 'Disease'
-                vaccine_data.append(row)
-    except FileNotFoundError:
-        # Handle case where CSV is not found
-        pass # Or render an error page
-    
-    # Combined available seasons will only be the ALL_DISPLAY_SEASONS for dropdown
-    # The order is already defined in ALL_DISPLAY_SEASONS
-    combined_available_seasons = ALL_DISPLAY_SEASONS[:] # Create a copy
+    combined_available_seasons = ALL_DISPLAY_SEASONS[:] 
 
     current_season = _get_current_season()
-    selected_filter_option = request.GET.get('season','current')
+    selected_filter_option = request.GET.get('season', 'current')
 
-    # Filtering Logic based on selected_filter_option
+    # Filtering Logic
     final_filtered_data = []
 
     if selected_filter_option == 'current':
         filter_season_value = current_season
+        # FIX: Use (d['seasonality'] or '') to convert None to empty string
         final_filtered_data = [
             d for d in vaccine_data
-            if filter_season_value.lower() in d.get('Seasonality_Logic', '').lower()
+            if filter_season_value.lower() in (d.get('seasonality') or '').lower()
         ]
     elif selected_filter_option == 'seasonal':
         final_filtered_data = [
             d for d in vaccine_data
-            if d.get('Seasonality_Logic') and not any(
-                indicator.lower() in d['Seasonality_Logic'].lower() for indicator in NON_SEASONAL_INDICATORS
+            if d.get('seasonality') and not any(
+                indicator.lower() in (d['seasonality'] or '').lower() for indicator in NON_SEASONAL_INDICATORS
             )
         ]
     elif selected_filter_option == 'non-seasonal':
         final_filtered_data = [
             d for d in vaccine_data
-            if not d.get('Seasonality_Logic') or any(
-                indicator.lower() in d['Seasonality_Logic'].lower() for indicator in NON_SEASONAL_INDICATORS
+            if not d.get('seasonality') or any(
+                indicator.lower() in (d['seasonality'] or '').lower() for indicator in NON_SEASONAL_INDICATORS
             )
         ]
-    elif selected_filter_option and selected_filter_option in combined_available_seasons: # Specific season selected
+    elif selected_filter_option and selected_filter_option in combined_available_seasons: 
         filter_season_value = selected_filter_option
+        # FIX: Use (d['seasonality'] or '') here as well
         final_filtered_data = [
             d for d in vaccine_data
-            if filter_season_value.lower() in d.get('Seasonality_Logic', '').lower()
+            if filter_season_value.lower() in (d.get('seasonality') or '').lower()
         ]
     else: # Default: show all
         final_filtered_data = vaccine_data
@@ -102,7 +84,7 @@ def recommended_vaccines_view(request):
     # Group data by animal type
     recommended_data = {}
     for entry in final_filtered_data:
-        animal_type = entry.get('Species', 'Unknown') # Assuming 'Species' is the Animal Type
+        animal_type = entry.get('species', 'Unknown') 
         if animal_type not in recommended_data:
             recommended_data[animal_type] = []
         recommended_data[animal_type].append(entry)
@@ -110,11 +92,10 @@ def recommended_vaccines_view(request):
     context = {
         'recommended_data': recommended_data,
         'available_seasons': combined_available_seasons,
-        'selected_season_filter': selected_filter_option, # Changed context variable name for clarity
+        'selected_season_filter': selected_filter_option,
         'current_season_name': current_season,
     }
     return render(request, 'health/recommended_vaccines.html', context)
-
 @login_required
 @require_http_methods(["GET", "POST"])
 def schedule_form_view(request):
@@ -184,26 +165,15 @@ def vaccine_detail_view(request, vaccine_name_slug):
     """
     View to show detailed information for a specific vaccine based on its slugified name.
     """
-    csv_file_path = os.path.join(
-        os.path.dirname(__file__), 'dataset', 'vaccine_dataset.csv'
-    )
-    
     vaccine_data = []
-    try:
-        with open(csv_file_path, mode='r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                # Include all fields, including 'Disease'
-                vaccine_data.append(row)
-    except FileNotFoundError:
-        # Handle case where CSV is not found
-        pass # Or render an error page
+    # Fetch all records from the database
+    vaccine_data = list(VaccineDataset.objects.all().values())
     
     
     # 1. Look for the vaccine matching the slug
     found_vaccine = None
     for vaccine in vaccine_data:
-        if slugify(vaccine.get('Vaccine_Name', '')) == vaccine_name_slug:
+        if slugify(vaccine.get('vaccine_name', '')) == vaccine_name_slug:
             found_vaccine = vaccine
             break
 

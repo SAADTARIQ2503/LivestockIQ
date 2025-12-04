@@ -313,15 +313,14 @@
                                 {% for vaccine in vaccines %}
                                     <tr>
                                         <td>
-                                            <!-- LINK FIX: Generate URL for detail page -->
-                                            <a href="{% url 'health:vaccine_detail' vaccine_name_slug=vaccine.Vaccine_Name|slugify %}" class="vax-link">
-                                                {{ vaccine.Vaccine_Name|default:"N/A" }}
+                                            <a href="{% url 'health:vaccine_detail' vaccine_name_slug=vaccine.vaccine_name|slugify %}" class="vax-link">
+                                                {{ vaccine.vaccine_name|default:"N/A" }}
                                             </a>
                                         </td>
-                                        <td>{{ vaccine.Disease|default:"N/A" }}</td>
-                                        <td>{{ vaccine.Min_Age_Months|default:"N/A" }}</td>
-                                        <td>{{ vaccine.Dosage_Frequency|default:"N/A" }}</td>
-                                        <td>{{ vaccine.Seasonality_Logic|default:"N/A" }}</td>
+                                        <td>{{ vaccine.disease|default:"N/A" }}</td>
+                                        <td>{{ vaccine.min_age_months|default_if_none:"N/A" }}</td>
+                                        <td>{{ vaccine.dosage_frequency|default:"N/A" }}</td>
+                                        <td>{{ vaccine.seasonality|default:"N/A" }}</td>
                                     </tr>
                                 {% empty %}
                                     <tr>

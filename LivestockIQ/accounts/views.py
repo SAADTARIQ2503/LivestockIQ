@@ -8,6 +8,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib.auth import logout
+from django.contrib.auth.models import User
 
 def temp(request):
     return render(request , 'temp.html')
@@ -85,28 +86,51 @@ def signin(request):
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         username = request.POST.get('username')
         password = request.POST.get('password')
+        email = request.POST.get('email')
 
         if not username or not password:
+            msg = 'Please provide both username and password.'
             if is_ajax:
-                return JsonResponse({'status': 'error', 'message': 'Please provide both username and password.'})
-            messages.error(request, 'Please provide both username and password.')
+                return JsonResponse({'status': 'error', 'message': msg})
+            messages.error(request, msg)
             return render(request, 'signin.html')
 
+        if not User.objects.filter(username=username).exists():
+            msg = 'Username does not exist.'
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg})
+            messages.error(request, msg)
+            return render(request, 'signin.html')
+        if not User.objects.filter(email=email).exists():
+            msg = 'Email does not exist.'
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg})
+            messages.error(request, msg)
+            return render(request, 'signin.html')
+
+
+        
         user = auth.authenticate(request, username=username, password=password)
 
         if user is not None:
             auth.login(request, user)
             if is_ajax:
-                return JsonResponse({'status': 'success', 'message': f'Welcome back, {username}!', 'redirect_url': reverse('accounts:home')})
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': f'Welcome back, {username}!', 
+                    'redirect_url': reverse('accounts:home')
+                })
             messages.success(request, f'Welcome back, {username}!')
             return redirect('accounts:home')
             
         else:
+            
+            msg = 'Incorrect password. Please try again.'
             if is_ajax:
-                return JsonResponse({'status': 'error', 'message': 'Invalid credentials. Please try again.'})
-            messages.error(request , 'Invalid credentials. Please try again.')
-    return render(request , 'signin.html')
+                return JsonResponse({'status': 'error', 'message': msg})
+            messages.error(request, msg)
 
+    return render(request, 'signin.html')
 
 @login_required
 def logout_view(request):

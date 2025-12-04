@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.db.models import Q 
 from .models import Animal 
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+
 @login_required
 @csrf_exempt
 def add_animal(request):
@@ -31,7 +31,9 @@ def add_animal(request):
             return redirect('animals:add_animal')
 
         try:
+            # UPDATED: We now pass 'user=request.user' to create()
             new_animal = Animal.objects.create(
+                user=request.user,  # <--- Assumes the logged-in user owns this animal
                 animal_id=a_id,
                 animal_type=a_type,
                 age=a_age,
@@ -39,6 +41,7 @@ def add_animal(request):
                 vaccination_detail=a_vax
             )
             new_animal.save()
+            
             if is_ajax:
                 return JsonResponse({'status': 'success', 'message': 'Animal added successfully!'})
             messages.success(request, 'Animal added successfully!')
@@ -52,28 +55,20 @@ def add_animal(request):
     else:
         return render(request, 'add_animal.html')
 
+@login_required # Added login_required so we can access request.user safely
 def search_animal(request):
+    # Start with an empty queryset
     animals = Animal.objects.none()  
     query_set = {}
 
     try:
-        animals = Animal.objects.all()
+        # UPDATED: Only fetch animals belonging to the current user
+        animals = Animal.objects.filter(user=request.user)
+
         if request.method == 'POST':
             filters = Q()
-
             animal_id = request.POST.get('animal_id')
             if animal_id:
-                filters &= Q(animal_type__icontains=animal_type)
-                query_set['Type'] = animal_type
-            
-            sex = request.POST.get('sex')
-            if sex:
-                filters &= Q(sex__iexact=sex)
-                query_set['Sex'] = sex
-            
-            age = request.POST.get('age')
-            if age:
-                filters &= Q(age__exact=age)
                 filters &= Q(animal_id__icontains=animal_id)
                 query_set['Animal ID'] = animal_id
 
@@ -92,6 +87,7 @@ def search_animal(request):
                 filters &= Q(age__exact=age)
                 query_set['Age'] = age
 
+            # Apply the combined filters to the user's animals
             animals = animals.filter(filters)
             
             if not animals.exists():
