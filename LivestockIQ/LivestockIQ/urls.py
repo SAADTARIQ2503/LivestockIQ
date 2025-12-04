@@ -24,4 +24,5 @@ urlpatterns = [
     path('environment/', include('environment.urls')),
     path('health/', include('health.urls')), 
     path('alerts/', include('alerts.urls')), 
+    path('calculate/', include('calculate_cost.urls')),
 ]

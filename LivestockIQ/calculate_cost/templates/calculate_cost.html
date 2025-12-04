@@ -1,0 +1,754 @@
+{% comment %} 
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate Cost & Profit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        /* --- Base & Sidebar Styling --- */
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url("{% static 'accounts/BgImg.jpeg' %}");
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 16px; /* Slightly reduced base font size */
+            color: white;
+            display: flex;
+            overflow-y: hidden; /* Forces no scroll on body if possible */
+        }
+
+        .sidebar {
+            width: 80px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .nav-item a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            color: inherit;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .nav-item {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item i {
+            font-size: 24px;
+            color: #ffffff;
+            transition: color 0.2s;
+        }
+
+        /* Tooltip Styling */
+        .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #3b1c6d;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 7px 12px;
+            position: absolute;
+            z-index: 1;
+            left: calc(100% + 18px);
+            white-space: nowrap;
+            transition: opacity 0.3s;
+        }
+
+        .nav-item:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 100%;
+            margin-top: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent #3b1c6d transparent transparent;
+        }
+        
+        /* --- Main Content & Card Styling --- */
+        .main-content {
+            margin-left: 90px;
+            width: calc(100% - 90px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0; /* Removed padding to save space */
+            height: 100vh; /* Fixed height to match screen */
+        }
+
+        .form-card {
+            width: 550px;
+            padding: 25px 40px; /* Reduced vertical padding significantly */
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            color: white;
+            box-shadow: 0 6px 35px rgba(0, 0, 0, 0.7);
+        }
+
+        .form-card h2 {
+            margin: 0 0 15px; /* Reduced from 35px */
+            padding: 0;
+            color: #fff;
+            text-align: center;
+            font-weight: 400;
+            letter-spacing: 1.5px;
+            font-size: 24px; /* Slightly smaller title */
+        }
+
+        /* --- Input Fields (Compact) --- */
+        .user-box {
+            position: relative; 
+            margin-bottom: 20px; /* Reduced from 35px */
+        }
+
+        .user-box input {
+            width: 100%;
+            padding: 5px 0; /* Reduced padding */
+            color: white;
+            border: none;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+            background: transparent; 
+            outline: none; 
+            font-size: 16px;
+            -moz-appearance: textfield; 
+        }
+
+        .user-box input::-webkit-outer-spin-button,
+        .user-box input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        .user-box label {
+            position: absolute; 
+            top: 5px;
+            left: 0;
+            transition: .3s; 
+            color: rgba(255, 255, 255, 0.9);
+            pointer-events: none;
+            font-size: 16px;
+        }
+
+        .user-box input:focus ~ label,
+        .user-box input:not(:placeholder-shown) ~ label {
+            top: -18px; /* Adjusted for tighter spacing */
+            font-size: 13px;
+            color: #fff; 
+        }
+
+        /* --- Results Section (Compact) --- */
+        .results-section {
+            margin-top: 20px; /* Reduced from 40px */
+            padding-top: 15px; /* Reduced from 25px */
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px; /* Reduced gap */
+        }
+
+        .result-item {
+            background: rgba(59, 28, 109, 0.3);
+            padding: 8px; /* Reduced padding */
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .result-item.main-result {
+            grid-column: span 2;
+            background: rgba(59, 28, 109, 0.6);
+            margin-top: 5px;
+        }
+
+        .result-label {
+            display: block;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2px;
+        }
+
+        .result-value {
+            display: block;
+            font-size: 22px; /* Slightly smaller */
+            font-weight: 600;
+            color: #ffc107;
+            letter-spacing: 1px;
+        }
+
+        .profit-positive { color: #77ff77; }
+        .profit-negative { color: #ff7777; }
+
+        .form-footer {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px; /* Reduced from 35px */
+        }
+
+        .footer-link {
+            color: #60e4ff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px 15px;
+            transition: color 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .footer-link:hover {
+            color: #fff;
+            border-bottom: 2px solid #60e4ff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        
+        <div class="nav-item">
+            <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house"></i><span class="tooltip">Home</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'animals:add_animal' %}"><i class="fas fa-cow"></i><span class="tooltip">Add Animal</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar"></i><span class="tooltip">Vaccination Schedule</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span class="tooltip">Environmental Data</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'alerts:anomalies' %}"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="#"><i class="fas fa-calculator active-icon"></i><span class="tooltip">Calculate Cost</span></a>
+        </div>
+        
+    </div>
+
+    <div class="main-content">
+        <div class="form-card">
+            <h2>Calculate Cost & Profit</h2>
+            
+            <div id="calculator-inputs">
+                
+                <div style="margin-bottom: 15px; font-style: italic; color: rgba(255,255,255,0.7); text-align: center; font-size: 14px;">
+                    Enter your expenses and production below.
+                </div>
+
+                <div class="user-box">
+                    <input type="number" id="feed_cost" required="" placeholder=" " min="0" step="0.01">
+                    <label>Feed Cost total</label>
+                </div>
+
+                <div class="user-box">
+                    <input type="number" id="electricity_cost" required="" placeholder=" " min="0" step="0.01">
+                    <label>Electricity Cost total</label>
+                </div>
+
+                <div class="user-box">
+                    <input type="number" id="other_costs" required="" placeholder=" " min="0" step="0.01">
+                    <label>Other Costs total</label>
+                </div>
+
+                <div style="margin: 20px 0 15px; border-bottom: 1px solid rgba(255,255,255,0.2);"></div>
+
+                <div class="user-box">
+                    <input type="number" id="milk_produced" required="" placeholder=" " min="0" step="0.1">
+                    <label>Total Milk Produced (Liters/Kg)</label>
+                </div>
+
+                <div class="user-box">
+                    <input type="number" id="current_price" required="" placeholder=" " min="0" step="0.01">
+                    <label>Current Price (per unit)</label>
+                </div>
+
+            </div>
+
+            <div class="results-section">
+                <div class="result-item">
+                    <span class="result-label">Total Costs</span>
+                    <span class="result-value" id="total_cost_display">0.00</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Estimated Revenue</span>
+                    <span class="result-value" id="total_revenue_display">0.00</span>
+                </div>
+                <div class="result-item main-result">
+                    <span class="result-label" style="font-size: 16px;">Estimated Profit</span>
+                    <span class="result-value" id="profit_display" style="font-size: 28px;">0.00</span>
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <a href="{% url 'accounts:home' %}" class="footer-link">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const feedInput = document.getElementById('feed_cost');
+            const elecInput = document.getElementById('electricity_cost');
+            const otherInput = document.getElementById('other_costs');
+            const milkInput = document.getElementById('milk_produced');
+            const priceInput = document.getElementById('current_price');
+
+            const costDisplay = document.getElementById('total_cost_display');
+            const revenueDisplay = document.getElementById('total_revenue_display');
+            const profitDisplay = document.getElementById('profit_display');
+
+            function calculateResults() {
+                const feed = parseFloat(feedInput.value) || 0;
+                const elec = parseFloat(elecInput.value) || 0;
+                const other = parseFloat(otherInput.value) || 0;
+                const milk = parseFloat(milkInput.value) || 0;
+                const price = parseFloat(priceInput.value) || 0;
+
+                const totalCost = feed + elec + other;
+                const totalRevenue = milk * price;
+                const profit = totalRevenue - totalCost;
+
+                costDisplay.textContent = totalCost.toFixed(2);
+                revenueDisplay.textContent = totalRevenue.toFixed(2);
+                profitDisplay.textContent = profit.toFixed(2);
+
+                profitDisplay.className = 'result-value'; 
+
+                if (profit > 0) {
+                    profitDisplay.classList.add('profit-positive');
+                } else if (profit < 0) {
+                    profitDisplay.classList.add('profit-negative');
+                }
+            }
+
+            const allInputs = [feedInput, elecInput, otherInput, milkInput, priceInput];
+            
+            allInputs.forEach(inputField => {
+                inputField.addEventListener('input', calculateResults);
+            });
+        });
+    </script>
+</body>
+</html> {% endcomment %}
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate Cost & Profit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        /* --- Base & Sidebar Styling --- */
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url("{% static 'accounts/BgImg.jpeg' %}");
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 16px; /* Slightly reduced base font size */
+            color: white;
+            display: flex;
+            overflow: hidden; /* HIDDEN SCROLLBAR */
+        }
+
+        .sidebar {
+            width: 80px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .nav-item a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            color: inherit;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .nav-item {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item i {
+            font-size: 24px;
+            color: #ffffff;
+            transition: color 0.2s;
+        }
+
+        /* Tooltip Styling */
+        .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #3b1c6d;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 7px 12px;
+            position: absolute;
+            z-index: 1;
+            left: calc(100% + 18px);
+            white-space: nowrap;
+            transition: opacity 0.3s;
+        }
+
+        .nav-item:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 100%;
+            margin-top: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent #3b1c6d transparent transparent;
+        }
+        
+        /* --- Main Content & Card Styling --- */
+        .main-content {
+            margin-left: 90px;
+            width: calc(100% - 90px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0; /* REMOVED PADDING */
+            height: 100vh; /* FIXED HEIGHT */
+        }
+
+        .form-card {
+            width: 550px;
+            padding: 25px 45px; /* REDUCED PADDING (was 45px) */
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            color: white;
+            box-shadow: 0 6px 35px rgba(0, 0, 0, 0.7);
+        }
+
+        .form-card h2 {
+            margin: 0 0 20px; /* REDUCED MARGIN (was 35px) */
+            padding: 0;
+            color: #fff;
+            text-align: center;
+            font-weight: 400;
+            letter-spacing: 1.5px;
+            font-size: 26px; /* Slightly smaller font */
+        }
+
+        /* --- Input Fields (Floating Labels Style) --- */
+        .user-box {
+            position: relative; 
+            margin-bottom: 22px; /* REDUCED MARGIN (was 35px) */
+        }
+
+        .user-box input {
+            width: 100%;
+            padding: 8px 0; /* Slightly reduced padding */
+            color: white;
+            border: none;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+            background: transparent; 
+            outline: none; 
+            font-size: 16px;
+            -moz-appearance: textfield; 
+        }
+
+        .user-box input::-webkit-outer-spin-button,
+        .user-box input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        .user-box label {
+            position: absolute; 
+            top: 5px;
+            left: 0;
+            transition: .3s; 
+            color: rgba(255, 255, 255, 0.9);
+            pointer-events: none;
+            font-size: 16px;
+        }
+
+        .user-box input:focus ~ label,
+        .user-box input:not(:placeholder-shown) ~ label {
+            top: -20px;
+            font-size: 13px;
+            color: #fff; 
+        }
+
+        /* --- Results Section (Compact) --- */
+        .results-section {
+            margin-top: 25px; /* REDUCED (was 40px) */
+            padding-top: 20px; /* REDUCED (was 25px) */
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; /* REDUCED GAP */
+        }
+
+        .result-item {
+            background: rgba(59, 28, 109, 0.3);
+            padding: 10px; /* REDUCED PADDING */
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .result-item.main-result {
+            grid-column: span 2;
+            background: rgba(59, 28, 109, 0.6);
+            margin-top: 5px;
+        }
+
+        .result-label {
+            display: block;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 3px;
+        }
+
+        .result-value {
+            display: block;
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffc107;
+            letter-spacing: 1px;
+        }
+
+        .profit-positive { color: #77ff77; }
+        .profit-negative { color: #ff7777; }
+
+        .form-footer {
+            display: flex;
+            justify-content: center;
+            margin-top: 25px; /* REDUCED (was 35px) */
+        }
+
+        .footer-link {
+            color: #60e4ff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 7px 20px;
+            transition: color 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .footer-link:hover {
+            color: #fff;
+            border-bottom: 2px solid #60e4ff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        
+        <div class="nav-item">
+            <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house"></i><span class="tooltip">Home</span></a>
+        </div>
+        <div class="nav-item">
+<a href="{% url 'animals:select_method' %}"><i class="fas fa-cow"></i><span class="tooltip">Add Animal</span></a>  
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar"></i><span class="tooltip">Vaccination Schedule</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span class="tooltip">Environmental Data</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'alerts:anomalies' %}"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="#"><i class="fas fa-calculator "></i><span class="tooltip">Calculate Cost</span></a>
+        </div>
+        
+    </div>
+
+    <div class="main-content">
+        <div class="form-card">
+            <h2>Calculate Cost & Profit</h2>
+            
+            <div id="calculator-inputs">
+                
+                <div style="margin-bottom: 20px; font-style: italic; color: rgba(255,255,255,0.7); text-align: center; font-size: 14px;">
+                    Enter your expenses and production below.
+                </div>
+
+                <div class="user-box">
+                    <input type="number" id="feed_cost" required="" placeholder=" " min="0" step="0.01">
+                    <label>Feed Cost total</label>
+                </div>
+
+                <div class="user-box">
+                    <input type="number" id="electricity_cost" required="" placeholder=" " min="0" step="0.01">
+                    <label>Electricity Cost total</label>
+                </div>
+
+                <div class="user-box">
+                    <input type="number" id="other_costs" required="" placeholder=" " min="0" step="0.01">
+                    <label>Other Costs total</label>
+                </div>
+
+                <div style="margin: 25px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.2);"></div>
+
+                <div class="user-box">
+                    <input type="number" id="milk_produced" required="" placeholder=" " min="0" step="0.1">
+                    <label>Total Milk Produced (Liters/Kg)</label>
+                </div>
+
+                <div class="user-box">
+                    <input type="number" id="current_price" required="" placeholder=" " min="0" step="0.01">
+                    <label>Current Price (per unit)</label>
+                </div>
+
+            </div>
+
+            <div class="results-section">
+                <div class="result-item">
+                    <span class="result-label">Total Costs</span>
+                    <span class="result-value" id="total_cost_display">0.00</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Estimated Revenue</span>
+                    <span class="result-value" id="total_revenue_display">0.00</span>
+                </div>
+                <div class="result-item main-result">
+                    <span class="result-label" style="font-size: 16px;">Estimated Profit</span>
+                    <span class="result-value" id="profit_display" style="font-size: 28px;">0.00</span>
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <a href="{% url 'accounts:home' %}" class="footer-link">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const feedInput = document.getElementById('feed_cost');
+            const elecInput = document.getElementById('electricity_cost');
+            const otherInput = document.getElementById('other_costs');
+            const milkInput = document.getElementById('milk_produced');
+            const priceInput = document.getElementById('current_price');
+
+            const costDisplay = document.getElementById('total_cost_display');
+            const revenueDisplay = document.getElementById('total_revenue_display');
+            const profitDisplay = document.getElementById('profit_display');
+
+            function calculateResults() {
+                const feed = parseFloat(feedInput.value) || 0;
+                const elec = parseFloat(elecInput.value) || 0;
+                const other = parseFloat(otherInput.value) || 0;
+                const milk = parseFloat(milkInput.value) || 0;
+                const price = parseFloat(priceInput.value) || 0;
+
+                const totalCost = feed + elec + other;
+                const totalRevenue = milk * price;
+                const profit = totalRevenue - totalCost;
+
+                costDisplay.textContent = totalCost.toFixed(2);
+                revenueDisplay.textContent = totalRevenue.toFixed(2);
+                profitDisplay.textContent = profit.toFixed(2);
+
+                profitDisplay.className = 'result-value'; 
+
+                if (profit > 0) {
+                    profitDisplay.classList.add('profit-positive');
+                } else if (profit < 0) {
+                    profitDisplay.classList.add('profit-negative');
+                }
+            }
+
+            const allInputs = [feedInput, elecInput, otherInput, milkInput, priceInput];
+            
+            allInputs.forEach(inputField => {
+                inputField.addEventListener('input', calculateResults);
+            });
+        });
+    </script>
+</body>
+</html>

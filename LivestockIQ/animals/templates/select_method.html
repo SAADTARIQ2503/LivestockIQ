@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Add Method</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        /* REUSED STYLES FROM YOUR PREVIOUS FILES */
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url("{% static 'accounts/BgImg.jpeg' %}");
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: white;
+            display: flex;
+        }
+
+               .sidebar {
+            width: 80px; 
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px; 
+            background: rgba(0, 0, 0, 0.4); 
+            backdrop-filter: blur(8px); 
+            box-shadow: 3px 0 10px rgba(0, 0, 0, 0.6); 
+            z-index: 100;
+        }
+
+        .nav-item a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            color: inherit; 
+            text-decoration: none; 
+            position: relative; 
+        }
+        .nav-item {
+            width: 100%;
+            height: 60px; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; 
+            margin-bottom: 20px; 
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item i {
+            font-size: 24px; 
+            color: #ffffff;
+            transition: color 0.2s;
+        }
+
+        /* Tooltip Styling */
+        .tooltip {
+            visibility: hidden;25px
+            opacity: 0;
+            background-color: #2b0c4d;
+            /* Dark purple tooltip background */
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            left: calc(100% + 15px);
+            white-space: nowrap;
+            transition: opacity 0.3s;
+        }
+
+        .nav-item:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 100%;
+            margin-top: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent #3b1c6d transparent transparent;
+        }
+
+        /* --- NEW STYLES FOR SELECTION CARDS --- */
+        .main-content {
+            margin-left: 90px;
+            width: calc(100% - 90px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            gap: 40px; /* Space between the two cards */
+            flex-wrap: wrap;
+        }
+
+        .choice-card {
+            width: 300px;
+            height: 350px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.3s, background 0.3s, box-shadow 0.3s;
+            text-decoration: none; /* For the link */
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .choice-card:hover {
+            transform: translateY(-10px); /* Lift up effect */
+            background: rgba(59, 28, 109, 0.6); /* Purple tint on hover */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .choice-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            color: #60e4ff;
+        }
+
+        .choice-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .choice-desc {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+            padding: 0 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="nav-item">
+            <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house"></i><span class="tooltip">Home</span></a>
+        </div>
+        <div class="nav-item">
+<a href="{% url 'animals:select_method' %}"><i class="fas fa-cow"></i><span class="tooltip">Add Animal</span></a>  
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'health:vaccination_schedule' %}"><i class="fa-regular fa-calendar"></i><span class="tooltip">Vaccination Schedule</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'environment:view_data' %}"><i class="fas fa-thermometer-half"></i><span class="tooltip">Environmental Data</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'alerts:anomalies' %}"><i class="fa-regular fa-eye"></i><span class="tooltip">Anomalies</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'animals:search_livestock' %}"><i class="fas fa-search"></i><span class="tooltip">Search Livestock</span></a>
+        </div>
+        <div class="nav-item">
+             <a href="{% url 'calculate_cost:calculator' %}"><i class="fas fa-calculator"></i><span class="tooltip">Calculate Cost</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        
+        <a href="{% url 'animals:add_animal' %}" class="choice-card">
+            <i class="fas fa-pen-to-square choice-icon"></i>
+            <div class="choice-title">Manual Entry</div>
+            <div class="choice-desc">Fill out the form manually to register a new animal.</div>
+        </a>
+
+        <a href="{% url 'animals:auto_add' %}" class="choice-card">
+            <i class="fas fa-wifi choice-icon"></i>
+            <div class="choice-title">Auto Add</div>
+            <div class="choice-desc">Detect animal data via RFID tags or Camera AI.</div>
+        </a>
+
+    </div>
+
+</body>
+</html>

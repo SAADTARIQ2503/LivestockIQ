@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'environment',
     'health',
     'alerts',
+    'calculate_cost',
 ]
 
 MIDDLEWARE = [

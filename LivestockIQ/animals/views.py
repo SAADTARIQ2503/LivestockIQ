@@ -102,3 +102,14 @@ def search_animal(request):
         'filters': query_set,
     }
     return render(request, 'search_animal.html', context)
+
+
+# ... existing imports ...
+
+def select_method(request):
+    """Renders the page to choose between Manual or Auto"""
+    return render(request, 'select_method.html')
+
+def auto_add(request):
+    """Renders the RFID/Camera simulation page"""
+    return render(request, 'auto_add.html')
