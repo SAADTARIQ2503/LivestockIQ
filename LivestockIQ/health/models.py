@@ -8,6 +8,7 @@ class VaccinationSchedule(models.Model):
     schedule_date = models.DateField()
     dose_notes = models.CharField(max_length=255, blank=True, null=True)
     is_group = models.BooleanField(default=False)
+    is_completed = models.BooleanField(default=False) 
 
     def __str__(self):
         if self.is_group:

@@ -8,6 +8,8 @@ from django.views.decorators.http import require_http_methods
 import json
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 
 # ... (Keep your existing seasons lists and _get_current_season function here) ...
 
@@ -126,10 +128,11 @@ def schedule_form_view(request):
                     group_type=group_type,
                     vaccine_name=vaccine_name,
                     schedule_date=schedule_date,
-                    dose_notes=dose_notes
+                    dose_notes=dose_notes,
+                    is_completed=False
                 )
             else:
-                animal__id = data.get('animal_id')
+                animal_id = data.get('animal_id')
                 if not animal_id:
                     return JsonResponse({'status': 'error', 'message': 'Animal ID is required for individual vaccination.'}, status=400)
                 
@@ -140,7 +143,8 @@ def schedule_form_view(request):
                         is_group=False,
                         vaccine_name=vaccine_name,
                         schedule_date=schedule_date,
-                        dose_notes=dose_notes
+                        dose_notes=dose_notes,
+                        is_completed=False
                     )
                 except Animal.DoesNotExist:
                     return JsonResponse({'status': 'error', 'message': 'Animal with this ID does not exist.'}, status=400)
@@ -154,11 +158,6 @@ def schedule_form_view(request):
 
     return render(request, 'health/schedule_form.html')
 
-@login_required
-def vaccination_schedule_view(request):
-    schedules = VaccinationSchedule.objects.all().order_by('schedule_date')
-    context = {'schedules': schedules}
-    return render(request, 'health/vaccination_schedule.html', context)
 
 @login_required
 def vaccine_detail_view(request, vaccine_name_slug):
@@ -189,3 +188,33 @@ def vaccine_detail_view(request, vaccine_name_slug):
         'vaccine': found_vaccine
     }
     return render(request, 'health/vaccine_detail.html', context)
+
+@login_required
+@require_http_methods(["POST"])
+def mark_vaccine_completed(request, schedule_id):
+    """Marks a specific vaccination schedule as completed."""
+    schedule = get_object_or_404(VaccinationSchedule, pk=schedule_id)
+    schedule.is_completed = True
+    schedule.save()
+    return redirect('health:vaccination_schedule') # Redirect back to the schedule list
+
+@login_required
+@require_http_methods(["POST"])
+def delete_vaccine_schedule(request, schedule_id):
+    """Deletes a specific vaccination schedule."""
+    schedule = get_object_or_404(VaccinationSchedule, pk=schedule_id)
+    schedule.delete()
+    return redirect('health:vaccination_schedule') # Redirect back to the schedule list
+
+
+@login_required
+def vaccination_schedule_view(request):
+    # Filter and sort schedules to pass to the template
+    upcoming_schedules = VaccinationSchedule.objects.filter(is_completed=False).order_by('schedule_date')
+    completed_schedules = VaccinationSchedule.objects.filter(is_completed=True).order_by('-schedule_date') # Most recent first
+    
+    context = {
+        'upcoming_schedules': upcoming_schedules,
+        'completed_schedules': completed_schedules,
+    }
+    return render(request, 'health/vaccination_schedule.html', context)

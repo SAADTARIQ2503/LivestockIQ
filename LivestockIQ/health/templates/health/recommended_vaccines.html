@@ -236,6 +236,44 @@
         .back-link:hover {
             color: #fff;
         }
+        .task-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-icon-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .action-icon-btn.complete {
+            color: #28a745; /* Green */
+        }
+        .action-icon-btn.complete:hover {
+            background-color: rgba(40, 167, 69, 0.2); 
+        }
+
+        .action-icon-btn.delete {
+            color: #dc3545; /* Red */
+        }
+        .action-icon-btn.delete:hover {
+            background-color: rgba(220, 53, 69, 0.2); 
+        }
+
+        .task-meta {
+            margin-right: 10px; /* Space between date and buttons */
+        }
+
+        /* Update completed status color */
+        .completed-meta {
+            color: #28a745 !important;
+        }
 
     </style>
 </head>
