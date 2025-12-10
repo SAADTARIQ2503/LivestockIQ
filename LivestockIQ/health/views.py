@@ -1,15 +1,14 @@
-import os
 from datetime import datetime
 from django.shortcuts import render
 from django.http import JsonResponse
 from .models import VaccinationSchedule, VaccineDataset
 from animals.models import Animal
 from django.views.decorators.http import require_http_methods
-import json
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+import json
 
 # ... (Keep your existing seasons lists and _get_current_season function here) ...
 
@@ -30,7 +29,7 @@ def _get_current_season():
     elif current_month in [5, 6]:
         return "Summer"
     elif current_month in [7, 8]:
-        return "Pre Monsoon"
+        return "Pre-Monsoon"
     else: # Sept, Oct, Nov
         return "Autumn"
 
@@ -102,6 +101,11 @@ def recommended_vaccines_view(request):
 @require_http_methods(["GET", "POST"])
 def schedule_form_view(request):
     """View to display the form for scheduling individual or group vaccinations."""
+    
+    # --- New: Fetching available vaccine names ---
+    available_vaccines = VaccineDataset.objects.values_list('vaccine_name', flat=True).distinct().order_by('vaccine_name')
+    # ---------------------------------------------
+
     if request.method == 'POST':
         try:
             # Check if the request is AJAX with JSON
@@ -117,6 +121,11 @@ def schedule_form_view(request):
 
             if not vaccine_name or not schedule_date:
                 return JsonResponse({'status': 'error', 'message': 'Vaccine name and schedule date are required.'}, status=400)
+
+            # Check if the vaccine name is valid (optional but good practice)
+            if vaccine_name not in available_vaccines:
+                return JsonResponse({'status': 'error', 'message': f"Invalid vaccine name selected: {vaccine_name}"}, status=400)
+
 
             if is_group:
                 group_type = data.get('group_type')
@@ -156,7 +165,10 @@ def schedule_form_view(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-    return render(request, 'health/schedule_form.html')
+    context = {
+        'available_vaccines': available_vaccines,
+    }
+    return render(request, 'health/schedule_form.html', context)
 
 
 @login_required

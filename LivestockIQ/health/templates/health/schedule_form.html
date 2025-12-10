@@ -346,7 +346,7 @@
                     <div style="position: relative;">
                         <select name="group_type" required>
                             <option value="" disabled selected></option>
-                            <option value="Cattle">Cattle</option>
+                            <option value="Cows">Cows</option>
                             <option value="Sheep">Sheep</option>
                             <option value="Goats">Goats</option>
                         </select>
@@ -356,8 +356,15 @@
                 </div>
 
                 <div class="user-box">
-                    <input type="text" name="vaccine_name" required="" placeholder=" ">
-                    <label>Vaccine Name:</label>
+                    <div style="position: relative;">
+                        <select name="vaccine_name" required>
+                            <option value="" disabled selected></option> {% for vaccine in available_vaccines %}
+                            <option value="{{ vaccine }}">{{ vaccine }}</option>
+                            {% endfor %}
+                        </select>
+                        <label>Select Vaccine Name:</label>
+                        <i class="fas fa-chevron-down select-arrow"></i>
+                    </div>
                 </div>
                 
                 <div class="user-box">

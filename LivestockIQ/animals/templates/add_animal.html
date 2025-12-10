@@ -13,7 +13,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-image: url("{% static 'accounts/BgImg.jpeg' %}");
+            background-color: rgba(1, 147, 11, 0.56);
             background-size: cover;
             background-position: center;
             min-height: 100vh;
@@ -21,6 +21,7 @@
             font-size: 17px; /* Increased base font size */
             color: white; /* Stronger white color */
             display: flex; /* Enables sidebar layout */
+            {% comment %} background-image: url("{% static 'accounts/BgImg.jpeg' %}"); {% endcomment %}
         }
 
         /* -------------------------------------- */
@@ -79,7 +80,6 @@
             visibility: hidden;25px
             opacity: 0;
             background-color: #2b0c4d;
-            /* Dark purple tooltip background */
             color: #fff;
             text-align: center;
             border-radius: 4px;
@@ -270,14 +270,71 @@
         .footer-link:hover {
             color: #fff;
         }
+        .toggle-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 50px;
+          height: 24px;
+        }
+
+        .switch input { 
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 24px;
+        }
+
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 16px;
+          width: 16px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+
+        input:checked + .slider {
+          background-color: #28a745; /* Green for Healthy/ON */
+        }
+        
+        input:not(:checked) + .slider {
+          background-color: #dc3545; /* Red for Not Healthy/OFF */
+        }
+
+        input:checked + .slider:before {
+          transform: translateX(26px);
+        }
     </style>
 </head>
 
 <body>
 
-    <!-- Vertical Navigation Bar  -->
-   <div class="sidebar">
-        
+    <div class="sidebar">
         <div class="nav-item">
             <a href="{% url 'accounts:home' %}"><i class="fa-solid fa-house"></i><span class="tooltip">Home</span></a>
         </div>
@@ -299,10 +356,8 @@
         <div class="nav-item">
             <a href="{% url 'calculate_cost:calculator' %}"><i class="fas fa-calculator "></i><span class="tooltip">Calculate Cost</span></a>
         </div>
-        
     </div>
 
-    <!-- Main Content Area: Centering the Add Animal Form -->
     <div class="main-content">
         <div class="form-card">
             <h2>Add Animal Data</h2>
@@ -310,11 +365,6 @@
             <form id="add-animal-form" method="POST" enctype="multipart/form-data">
                 {% csrf_token %} 
                 
-                <div class="user-box">
-                    <input type="text" name="animal_id" required="" placeholder=" ">
-                    <label>Animal ID:</label>
-                </div>
-
                 <div class="user-box">
                     <select name="type" required="">
                         <option value="" disabled selected hidden></option>
@@ -334,27 +384,32 @@
 
                 <div class="user-box">
                     <input type="text" name="sex" required="" pattern="[MFmf]" maxlength="1" title="Please enter 'M' for Male or 'F' for Female." placeholder=" ">
-                    <label>Sex:</label>
+                    <label>Sex (M/F):</label>
                 </div>
-
-                <div class="user-box">
-                    <input type="text" name="vaccination_detail" required="" placeholder=" ">
-                    <label>Vaccination Detail:</label>
+                
+                <div class="toggle-container">
+                    <span>Animal is Not Healthy</span>
+                    <label class="switch">
+                        <input type="checkbox" id="healthToggle" name="is_healthy" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Animal is Healthy</span>
                 </div>
-
-                {% comment %} <div class="upload-group">
-                    <span class="upload-text">Upload pics:</span>
-                    <!-- Hidden actual file input -->
-                    <input type="file" name="pics" id="file-upload" accept="image/*">
-                    <!-- Custom button to trigger the hidden file input -->
-                    <label for="file-upload" class="upload-button">Upload</label>
-                </div> {% endcomment %}
+                
+                <div class="user-box" id="requiredVaccineField" style="display: none;">
+                    <div style="position: relative;">
+                        <select name="required_vaccine">
+                            <option value="" disabled selected hidden></option>
+                            {% for vaccine in available_vaccines %}
+                            <option value="{{ vaccine }}">{{ vaccine }}</option>
+                            {% endfor %}
+                        </select>
+                        <label>Required Vaccine:</label>
+                    </div>
+                </div>
 
                 <div class="form-footer">
-                    <!-- CORRECTED: Back button using the namespaced URL -->
                     <a href="{% url 'animals:select_method' %}" class="upload-button" style="text-decoration: none;">Back</a>
-                    
-                    <!-- Done button should submit the form -->
                     <button type="submit" class="upload-button" >Add Animal</button>
                 </div>
             </form>
@@ -371,7 +426,7 @@
             'Sheep': [
                 '0–12 months',
                 '1–1.5 years',
-                '1.5+ years' // Corrected typo in the prompt's data from '1.5 years'
+                '1.5+ years'
             ],
             'Goat': [
                 '0–6 months',
@@ -382,43 +437,56 @@
 
         const animalTypeSelect = document.querySelector('select[name="type"]');
         const ageSelect = document.getElementById('age-select');
+        const healthToggle = document.getElementById('healthToggle');
+        const vaccineField = document.getElementById('requiredVaccineField');
+        const requiredVaccineSelect = vaccineField.querySelector('select[name="required_vaccine"]');
 
-        // Function to populate the age dropdown
-        function populateAgeDropdown() {
-            const animalType = animalTypeSelect.value;
-            // Use the ages array, or an empty array if no type is selected
-            const ages = ageRanges[animalType] || [];
 
-            // Clear existing options, but keep the initial placeholder option
-            ageSelect.innerHTML = '<option value="" disabled selected hidden> </option>';
-
-            // Add new options
-            ages.forEach(age => {
-                const option = document.createElement('option');
-                option.value = age;
-                option.textContent = age;
-                ageSelect.appendChild(option);
-            });
+        function toggleRequired(selectElement, isRequired) {
+             // We only set 'required' for the select if the animal is NOT healthy.
+             if (selectElement) {
+                selectElement.required = isRequired;
+             }
         }
         
-        // 1. Attach the change event listener to the Type select
-        animalTypeSelect.addEventListener('change', populateAgeDropdown);
+        // Function to toggle vaccine dropdown visibility
+        function toggleVaccineField() {
+            // is_healthy is checked = Healthy (display: none)
+            // is_healthy is unchecked = Not Healthy (display: block)
+            if (healthToggle.checked) {
+                vaccineField.style.display = 'none';
+                toggleRequired(requiredVaccineSelect, false);
+                requiredVaccineSelect.value = ""; // Clear selection when hidden
+            } else {
+                vaccineField.style.display = 'block';
+                toggleRequired(requiredVaccineSelect, true);
+            }
+        }
         
-        // 2. IMPORTANT: If a value is already selected (e.g., from browser autofill or cache),
-        // manually call the function on page load to populate the Age field immediately.
+        // 1. Attach event listener to the health toggle
+        healthToggle.addEventListener('change', toggleVaccineField);
+        
+        // 2. Initial call to set state correctly on load
         document.addEventListener('DOMContentLoaded', () => {
-             // If a type is somehow selected on load, populate the ages.
+             toggleVaccineField(); // Set initial state
+             
+             // ... (rest of the age dropdown logic) ...
              if (animalTypeSelect.value) {
                 populateAgeDropdown();
              }
              
-             // --- Original AJAX submission listener (kept for context) ---
+             // --- AJAX submission listener (updated) ---
              document.getElementById('add-animal-form').addEventListener('submit', function(event) {
                  event.preventDefault();
 
                  const form = event.target;
                  const formData = new FormData(form);
                  const messageContainer = document.getElementById('message-container');
+                 
+                 // CRITICAL: Handle the checked state of the health toggle
+                 // If checked, FormData will include 'is_healthy: on'.
+                 // If unchecked, FormData will NOT include 'is_healthy'.
+                 // The Django view handles this distinction.
 
                  fetch(form.action, {
                      method: 'POST',
@@ -432,9 +500,11 @@
                      messageContainer.innerHTML = `<p style="color: ${data.status === 'success' ? 'lightgreen' : 'salmon'};">${data.message}</p>`;
                      if (data.status === 'success') {
                          form.reset();
-                         // CRITICAL: Reset the age dropdown after form submission
+                         // CRITICAL: Reset the toggle and clear conditional fields
+                         healthToggle.checked = true;
+                         toggleVaccineField(); 
                          ageSelect.innerHTML = '<option value="" disabled selected hidden> </option>';
-                         animalTypeSelect.value = ""; // Clear the animal type selection as well
+                         animalTypeSelect.value = "";
                      }
                  })
                  .catch(error => {
@@ -443,7 +513,22 @@
                  });
              });
         });
+        
+        // Function to populate the age dropdown (kept from original script)
+        function populateAgeDropdown() {
+            const animalType = animalTypeSelect.value;
+            const ages = ageRanges[animalType] || [];
+            ageSelect.innerHTML = '<option value="" disabled selected hidden> </option>';
+            ages.forEach(age => {
+                const option = document.createElement('option');
+                option.value = age;
+                option.textContent = age;
+                ageSelect.appendChild(option);
+            });
+        }
+        
+        // Attach the change event listener to the Type select (kept from original script)
+        animalTypeSelect.addEventListener('change', populateAgeDropdown);
     </script>
-
 </body>
 </html>
