@@ -10,10 +10,12 @@ import json
 import re 
 
 def temp(request):
+    """Placeholder view for a temporary page."""
     return render(request , 'temp.html')
 
 @login_required
 def home(request):
+    """Main dashboard view, requiring authentication."""
     # Dummy data for Herd Health Chart 1 (Doughnut Chart: Vaccinated vs. Unvaccinated)
     vaccination_data = {
         'labels': ['Vaccinated', 'Unvaccinated', 'Overdue'],
@@ -41,6 +43,8 @@ def signup(request):
     if request.method == 'POST':
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         username = request.POST.get('username')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
         email = request.POST.get('email')
         password = request.POST.get('password')
         password2 = request.POST.get('password2')
@@ -53,7 +57,6 @@ def signup(request):
             username_error = 'Username must be between 5 and 25 characters long.'
         
         # 2. Check for allowed characters (A-z, 0-9, and only '_')
-     
         elif not re.match(r'^[a-zA-Z0-9_]+$', username):
             username_error = 'Username can only contain letters, numbers, and the underscore (_).'
             
@@ -66,6 +69,7 @@ def signup(request):
         
         # --- End of Username Validation Implementation ---
         
+        # Check if username already exists
         if User.objects.filter(username=username).exists():
             if is_ajax:
                 return JsonResponse({'status': 'error', 'message': f"Username '{username}' is already taken."})
@@ -73,7 +77,6 @@ def signup(request):
             return redirect('accounts:signup')
             
         # --- Password Validation Implementation ---
-        
         validation_error = None
         
         # 1. Check if passwords match
@@ -101,6 +104,7 @@ def signup(request):
         
         # --- End of Password Validation Implementation ---
 
+        # Check if email already exists
         if User.objects.filter(email=email).exists():
             if is_ajax:
                 return JsonResponse({'status': 'error', 'message': f"An account with email '{email}' already exists."})
@@ -108,8 +112,16 @@ def signup(request):
             return redirect('accounts:signup')
         
         try:
-            user = User.objects.create_user(username = username ,email = email , password= password)
+            # Create user with all fields
+            user = User.objects.create_user(
+                username=username, 
+                email=email, 
+                password=password,
+                first_name=first_name, 
+                last_name=last_name
+            )
             user.save()
+            
             if is_ajax:
                 return JsonResponse({'status': 'success', 'message': 'User created successfully! Please sign in.', 'redirect_url': reverse('accounts:signin')})
             messages.success(request , 'User created successfully! Please sign in.')
@@ -150,8 +162,7 @@ def signin(request):
             messages.error(request, msg)
             return render(request, 'signin.html')
 
-        # --- New: Link Email to Username Check ---
-        # Ensure the provided email matches the email linked to the retrieved username object.
+        # --- Link Email to Username Check ---
         if user_obj.email.lower() != email.lower():
             msg = 'The provided email does not match the username.'
             if is_ajax:
