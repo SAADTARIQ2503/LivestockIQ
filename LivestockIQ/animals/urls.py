@@ -9,4 +9,5 @@ urlpatterns = [
     path('search/', views.search_animal, name='search_livestock'),
     path('select/', views.select_method, name='select_method'),
     path('auto_add/', views.auto_add, name='auto_add'),
+    path('ajax/vaccines/', views.get_vaccines_by_species_for_animal_add, name='ajax_vaccines_by_species_add'),
 ]

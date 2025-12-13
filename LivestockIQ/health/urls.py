@@ -17,5 +17,6 @@ urlpatterns = [
     # Other paths:
     path('recommendations/', views.recommended_vaccines_view, name='recommended_vaccines'),
     path('recommendations/<str:vaccine_name_slug>/', views.vaccine_detail_view, name='vaccine_detail'),
+    path('ajax/vaccines/', views.get_vaccines_by_species, name='ajax_vaccines_by_species'),
 ]
     

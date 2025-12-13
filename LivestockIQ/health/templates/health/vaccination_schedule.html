@@ -281,7 +281,7 @@
                                 {% if schedule.is_group %}
                                     Group: {{ schedule.group_type }}
                                 {% else %}
-                                    ID: {{ schedule.animal.animal_id }}
+                                    ID: {{ schedule.animal.id }}
                                 {% endif %}
                             </span>
                             <span class="task-meta">{{ schedule.schedule_date|date:"Y-m-d" }}</span>
@@ -317,7 +317,7 @@
                                 {% if schedule.is_group %}
                                     Group: {{ schedule.group_type }}
                                 {% else %}
-                                    ID: {{ schedule.animal.animal_id }}
+                                    ID: {{ schedule.animal.id }}
                                 {% endif %}
                             </span>
                             <span class="task-meta completed-meta">Completed {{ schedule.schedule_date|date:"Y-m-d" }}</span>

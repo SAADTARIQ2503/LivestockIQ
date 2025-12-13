@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMDJ8uR0FMOQo2T8Y897E9uE9h/u0F9+5W1E9sW9uC1F1C1W1X1C1W1W1W1C1W1" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     <style>
-        /* Base styling */
+        /* [Existing CSS Styles remain unchanged] */
+        /* Base styling for context */
         body {
             margin: 0;
             padding: 0;
@@ -335,32 +336,50 @@
                     <span>Schedule for Group/Herd</span>
                 </div>
                 
-                <!-- Individual Animal ID (Visible by default) -->
-                <div class="user-box" id="individualIdField">
-                    <input type="text" name="animal_id" placeholder=" ">
-                    <label>Individual Animal ID:</label>
-                </div>
-                
-                <!-- Group/Type Field (Hidden by default) -->
-                <div class="user-box" id="groupTypeField" style="display:none;">
-                    <div style="position: relative;">
-                        <select name="group_type" required>
-                            <option value="" disabled selected></option>
-                            <option value="Cows">Cows</option>
-                            <option value="Sheep">Sheep</option>
-                            <option value="Goats">Goats</option>
-                        </select>
-                        <label>Select Animal Group/Type:</label>
-                        <i class="fas fa-chevron-down select-arrow"></i>
+                <!-- INDIVIDUAL ANIMAL FIELDS -->
+                <div id="individualFields">
+                    <!-- NEW: Species/Type Selection -->
+                    <div class="user-box" id="individualSpeciesField">
+                        <div style="position: relative;">
+                            <select name="individual_species" id="individualSpeciesSelect">
+                                <option value="" disabled selected></option>
+                                {% for species in available_species %}
+                                    <option value="{{ species }}">{{ species }}</option>
+                                {% endfor %}
+                            </select>
+                            <label>Select Animal Species:</label>
+                            <i class="fas fa-chevron-down select-arrow"></i>
+                        </div>
+                    </div>
+                    <!-- Existing Animal ID Field -->
+                    <div class="user-box" id="individualIdField">
+                        <input type="text" name="animal_id" placeholder=" ">
+                        <label>Individual Animal ID:</label>
                     </div>
                 </div>
-
+                
+                <!-- GROUP ANIMAL FIELDS (Existing) -->
+                <div id="groupFields" style="display:none;">
+                    <div class="user-box" id="groupTypeField">
+                        <div style="position: relative;">
+                            <select name="group_type" id="groupTypeSelect">
+                                <option value="" disabled selected></option>
+                                {% for species in available_species %}
+                                    <option value="{{ species }}">{{ species }}</option>
+                                {% endfor %}
+                            </select>
+                            <label>Select Animal Group/Type:</label>
+                            <i class="fas fa-chevron-down select-arrow"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- VACCINE NAME FIELD (Updated to be dynamic) -->
                 <div class="user-box">
                     <div style="position: relative;">
-                        <select name="vaccine_name" required>
-                            <option value="" disabled selected></option> {% for vaccine in available_vaccines %}
-                            <option value="{{ vaccine }}">{{ vaccine }}</option>
-                            {% endfor %}
+                        <select name="vaccine_name" id="vaccineSelect" required>
+                            <option value="" disabled selected> </option>
+                            <!-- Options populated by JavaScript -->
                         </select>
                         <label>Select Vaccine Name:</label>
                         <i class="fas fa-chevron-down select-arrow"></i>
@@ -396,46 +415,157 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const toggle = document.getElementById('groupToggle');
-            const individualField = document.getElementById('individualIdField');
-            const groupField = document.getElementById('groupTypeField');
+            const individualSpeciesSelect = document.getElementById('individualSpeciesSelect');
+            const individualIdField = document.getElementById('individualIdField');
+            const groupTypeSelect = document.getElementById('groupTypeSelect');
+            const vaccineSelect = document.getElementById('vaccineSelect');
             
-            // Function to toggle required attribute
-            function toggleRequired(element, isRequired) {
-                const input = element.querySelector('input, select');
-                if (input) {
-                    input.required = isRequired;
-                }
-            }
-
-            toggle.addEventListener('change', function() {
-                if (toggle.checked) {
-                    // Group is selected
-                    individualField.style.display = 'none';
-                    groupField.style.display = 'block';
-                    toggleRequired(individualField, false);
-                    toggleRequired(groupField, true);
-                } else {
-                    // Individual is selected
-                    individualField.style.display = 'block';
-                    groupField.style.display = 'none';
-                    toggleRequired(individualField, true);
-                    toggleRequired(groupField, false);
-                }
-            });
+            const individualFields = document.getElementById('individualFields');
+            const groupFields = document.getElementById('groupFields');
             
-            // Initial check to set required fields correctly on load
-            toggleRequired(individualField, true);
-            toggleRequired(groupField, false);
-
             const form = document.getElementById('scheduleForm');
             const messageContainer = document.getElementById('message-container');
 
+            // URL for AJAX call (used to fetch filtered vaccines)
+            const ajaxUrl = "{% url 'health:ajax_vaccines_by_species' %}";
+
+            // Helper function to show messages
+            function showMessage(message, type = 'error') {
+                messageContainer.textContent = message;
+                messageContainer.style.color = type === 'success' ? 'green' : 'red';
+                messageContainer.style.display = 'block';
+                setTimeout(() => messageContainer.style.display = 'none', 5000);
+            }
+            
+            // Function to toggle required attribute
+            function toggleRequired(element, isRequired) {
+                const inputs = element.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    // Only set required status for visible/active fields
+                    if (isRequired) {
+                        input.setAttribute('required', 'required');
+                    } else {
+                        input.removeAttribute('required');
+                        // input.value = ''; // IMPORTANT: Do NOT clear value here, we clear later
+                    }
+                });
+            }
+            
+            // Function to fetch and update vaccines
+            function updateVaccineDropdown(species) {
+                if (!species) {
+                    vaccineSelect.innerHTML = '<option value="" disabled selected> </option>';
+                    vaccineSelect.setAttribute('required', 'required');
+                    vaccineSelect.setAttribute('disabled', 'disabled'); // Disable until selection is made
+                    return;
+                }
+                
+                // Enable dropdown and fetch data
+                vaccineSelect.removeAttribute('disabled');
+
+                fetch(`${ajaxUrl}?species=${species}`)
+                    .then(response => response.json())
+                    .then(vaccines => {
+                        let optionsHtml = '<option value="" disabled selected> </option>';
+                        if (vaccines.length > 0) {
+                            vaccines.forEach(vaccine => {
+                                optionsHtml += `<option value="${vaccine}">${vaccine}</option>`;
+                            });
+                        } else {
+                            optionsHtml = '<option value="" disabled selected>No vaccines found for this species</option>';
+                        }
+                        vaccineSelect.innerHTML = optionsHtml;
+                        vaccineSelect.setAttribute('required', 'required');
+                        
+                    })
+                    .catch(() => {
+                        vaccineSelect.innerHTML = '<option value="" disabled selected>Error loading vaccines</option>';
+                        showMessage('Failed to load vaccines from the server.', 'error');
+                    });
+            }
+            
+            // --- Event Handlers ---
+
+            // 1. Toggle between Individual and Group modes
+            toggle.addEventListener('change', function() {
+                // Clear the current vaccine selection to force re-selection
+                vaccineSelect.value = '';
+
+                if (toggle.checked) {
+                    // Group is selected
+                    individualFields.style.display = 'none';
+                    groupFields.style.display = 'block';
+                    
+                    // Clear individual fields and make group fields required
+                    toggleRequired(individualSpeciesSelect.parentElement.parentElement, false); // Pass parent div
+                    toggleRequired(individualIdField, false);
+                    toggleRequired(groupTypeSelect.parentElement.parentElement, true);
+                    
+                    // Clear the other species dropdown value
+                    individualSpeciesSelect.value = '';
+                    
+                    // Trigger vaccine update based on Group Type
+                    updateVaccineDropdown(groupTypeSelect.value);
+
+                } else {
+                    // Individual is selected
+                    individualFields.style.display = 'block';
+                    groupFields.style.display = 'none';
+                    
+                    // Clear group fields and make individual fields required
+                    toggleRequired(individualSpeciesSelect.parentElement.parentElement, true);
+                    toggleRequired(individualIdField, true);
+                    toggleRequired(groupTypeSelect.parentElement.parentElement, false);
+                    
+                    // Clear the other species dropdown value
+                    groupTypeSelect.value = '';
+
+                    // Trigger vaccine update based on Individual Species
+                    updateVaccineDropdown(individualSpeciesSelect.value);
+                }
+            });
+            
+            // 2. Update vaccines when Individual Species changes
+            individualSpeciesSelect.addEventListener('change', function() {
+                updateVaccineDropdown(individualSpeciesSelect.value);
+            });
+            
+            // 3. Update vaccines when Group Type changes
+            groupTypeSelect.addEventListener('change', function() {
+                updateVaccineDropdown(groupTypeSelect.value);
+            });
+
+
+            // 4. Form Submission (AJAX POST)
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData.entries());
                 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                // Add the toggle state explicitly
+                data.is_group = toggle.checked;
+
+                // Determine which species/group type to send
+                // Use the selected species/group value for the 'group_type' key expected by the backend
+                if (!data.is_group) {
+                    // Individual mode: use individual_species as the type
+                    data.group_type = data.individual_species; 
+                    delete data.individual_species; 
+                    // Animal ID is required and sent as 'animal_id'
+                } else {
+                    // Group mode: group_type is already set
+                    delete data.individual_species;
+                    delete data.animal_id; // Animal ID is not needed for group submission
+                }
+                
+                // Final validation check before sending
+                if (!data.vaccine_name || !data.schedule_date || (data.is_group && !data.group_type) || (!data.is_group && !data.animal_id)) {
+                    showMessage('Please fill in all required fields.', 'error');
+                    return;
+                }
+
 
                 fetch(window.location.href, {
                     method: 'POST',
@@ -445,26 +575,38 @@
                     },
                     body: JSON.stringify(data)
                 })
-                .then(response => response.json())
-                .then(result => {
-                    messageContainer.textContent = result.message;
-                    if (result.status === 'success') {
-                        messageContainer.style.color = 'green';
-                        form.reset();
-                        // Optionally redirect after a short delay
-                        setTimeout(() => {
-                            window.location.href = "{% url 'health:vaccination_schedule' %}";
-                        }, 2000);
-                    } else {
-                        messageContainer.style.color = 'red';
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(error => Promise.reject(error));
                     }
+                    return response.json();
+                })
+                .then(result => {
+                    showMessage(result.message, 'success');
+                    form.reset();
+                    
+                    // Reset dropdown states visually
+                    updateVaccineDropdown(''); 
+                    
+                    // Redirect after a short delay
+                    setTimeout(() => {
+                        window.location.href = "{% url 'health:vaccination_schedule' %}";
+                    }, 1500);
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    messageContainer.style.color = 'red';
-                    messageContainer.textContent = 'An unexpected error occurred. Please try again.';
+                    let errorMessage = error.message || 'An unexpected server error occurred.';
+                    showMessage(errorMessage, 'error');
                 });
             });
+            
+            // Initial setup to ensure correct fields are required/hidden
+            // Initial state: Individual mode is active
+            toggleRequired(groupTypeSelect.parentElement.parentElement, false);
+            toggleRequired(individualSpeciesSelect.parentElement.parentElement, true);
+            toggleRequired(individualIdField, true);
+            
+            updateVaccineDropdown(''); // Initialize empty
         });
     </script>
 </body>

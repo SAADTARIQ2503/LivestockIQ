@@ -14,7 +14,7 @@ class VaccinationSchedule(models.Model):
         if self.is_group:
             return f"Group: {self.group_type} - {self.vaccine_name} on {self.schedule_date}"
         else:
-            return f"{self.animal.animal_id} - {self.vaccine_name} on {self.schedule_date}"
+            return f"{self.animal.id} - {self.vaccine_name} on {self.schedule_date}"
         
 
 class VaccineDataset(models.Model):
