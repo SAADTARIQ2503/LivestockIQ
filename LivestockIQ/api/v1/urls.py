@@ -32,6 +32,23 @@ urlpatterns = [
     path('health/vaccines/<slug:slug>/', health.VaccineDetailView.as_view(), name='vaccine-detail'),
     path('health/vaccines/by-species/', health.VaccinesBySpeciesView.as_view(), name='vaccines-by-species'),
     
+    
     # Router URLs (includes animals and schedules)
     path('', include(router.urls)),
+
+
+    path('environment/weather/', environment.get_weather_data, name='weather-data'),
+    path('environment/status/', environment.get_environment_status, name='environment-status'),
+    path('environment/coordinates/', environment.get_coordinates_for_location, name='coordinates'),
+    
+    # Alerts endpoints
+    path('alerts/', alerts.get_anomalies, name='anomalies-list'),
+    path('alerts/<str:anomaly_id>/', alerts.get_anomaly_detail, name='anomaly-detail'),
+    path('alerts/<str:anomaly_id>/acknowledge/', alerts.acknowledge_anomaly, name='anomaly-acknowledge'),
+    path('alerts/statistics/', alerts.get_anomaly_statistics, name='anomaly-statistics'),
+    path('alerts/unacknowledged/', alerts.get_unacknowledged_anomalies, name='unacknowledged-anomalies'),
+    
+    # Cost calculation endpoints
+    path('costs/calculate/', costs.calculate_costs, name='calculate-costs'),
+    path('costs/defaults/', costs.get_default_costs, name='default-costs'),
 ]
