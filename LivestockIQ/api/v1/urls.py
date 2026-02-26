@@ -1,0 +1,37 @@
+"""
+API V1 URL Configuration
+"""
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import animals, health, auth
+from rest_framework_simplejwt.views import TokenRefreshView
+# Create router for viewsets
+router = DefaultRouter()
+router.register(r'animals', animals.AnimalViewSet, basename='animal')
+router.register(r'health/schedules', health.VaccinationScheduleViewSet, basename='vaccination-schedule')
+
+app_name = 'v1'
+
+urlpatterns = [
+    # Authentication endpoints
+    path('auth/register/', auth.RegisterView.as_view(), name='register'),
+    path('auth/login/', auth.CustomTokenObtainPairView.as_view(), name='login'),
+    path('auth/logout/', auth.logout_view, name='logout'),
+    path('auth/user/', auth.user_profile_view, name='user-profile'),
+    path('auth/user/update/', auth.update_profile_view, name='update-profile'),
+    path('auth/change-password/', auth.change_password_view, name='change-password'),
+    path('auth/dashboard/', auth.dashboard_stats_view, name='dashboard-stats'),
+    
+    # JWT token endpoints
+    
+    path('auth/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    
+    # Health/Vaccination endpoints
+    path('health/vaccines/', health.VaccineListView.as_view(), name='vaccine-list'),
+    path('health/vaccines/recommended/', health.RecommendedVaccinesView.as_view(), name='recommended-vaccines'),
+    path('health/vaccines/<slug:slug>/', health.VaccineDetailView.as_view(), name='vaccine-detail'),
+    path('health/vaccines/by-species/', health.VaccinesBySpeciesView.as_view(), name='vaccines-by-species'),
+    
+    # Router URLs (includes animals and schedules)
+    path('', include(router.urls)),
+]

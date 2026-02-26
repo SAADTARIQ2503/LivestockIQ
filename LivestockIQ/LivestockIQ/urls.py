@@ -14,15 +14,39 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+# This is a Python code snippet that is used in Django web framework for URL routing. Let me explain
+# the code snippet for you:
 from django.contrib import admin
-from django.urls import path , include
+from django.urls import path, include
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
-    path('',include ('accounts.urls')),
     path('admin/', admin.site.urls),
+    
+    # API URLs
+    path('api/', include('api.urls')),
+    
+    # API Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    
+    # Legacy URLs (keep these for now if needed)
+    path('', include('accounts.urls')),
     path('animals/', include('animals.urls')),
     path('environment/', include('environment.urls')),
-    path('health/', include('health.urls')), 
-    path('alerts/', include('alerts.urls')), 
+    path('health/', include('health.urls')),
+    path('alerts/', include('alerts.urls')),
     path('calculate/', include('calculate_cost.urls')),
 ]
+# from django.contrib import admin
+# from django.urls import path , include
+
+# urlpatterns = [
+#     path('',include ('accounts.urls')),
+#     path('admin/', admin.site.urls),
+#     path('animals/', include('animals.urls')),
+#     path('environment/', include('environment.urls')),
+#     path('health/', include('health.urls')), 
+#     path('alerts/', include('alerts.urls')), 
+#     path('calculate/', include('calculate_cost.urls')),
+# ]
