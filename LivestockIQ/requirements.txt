@@ -1,0 +1,35 @@
+# Django Core
+Django==5.2.8
+asgiref==3.10.0
+sqlparse==0.5.3
+
+# Django REST Framework
+djangorestframework==3.15.2
+djangorestframework-simplejwt==5.3.1
+
+# CORS Headers
+django-cors-headers==4.6.0
+
+# Database
+mysqlclient==2.2.4  # For MySQL
+
+# Environment Variables
+python-dotenv==1.2.1
+
+# HTTP Requests
+requests==2.32.5
+urllib3==2.5.0
+certifi==2025.11.12
+charset-normalizer==3.4.4
+idna==3.11
+
+# Additional utilities
+Pillow==11.0.0  # For image handling (if needed for animal photos)
+django-filter==24.3  # For advanced filtering in DRF
+
+# API Documentation
+drf-spectacular==0.28.0  # For automatic API documentation
+
+# For production
+gunicorn==23.0.0
+whitenoise==6.9.0  
