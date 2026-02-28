@@ -30,23 +30,8 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     
-    # Legacy URLs (keep these for now if needed)
-    path('', include('accounts.urls')),
-    path('animals/', include('animals.urls')),
-    path('environment/', include('environment.urls')),
-    path('health/', include('health.urls')),
-    path('alerts/', include('alerts.urls')),
-    path('calculate/', include('calculate_cost.urls')),
-]
-# from django.contrib import admin
-# from django.urls import path , include
 
-# urlpatterns = [
-#     path('',include ('accounts.urls')),
-#     path('admin/', admin.site.urls),
-#     path('animals/', include('animals.urls')),
-#     path('environment/', include('environment.urls')),
-#     path('health/', include('health.urls')), 
-#     path('alerts/', include('alerts.urls')), 
-#     path('calculate/', include('calculate_cost.urls')),
-# ]
+    
+]
+# if settings.DEBUG:
+#     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
