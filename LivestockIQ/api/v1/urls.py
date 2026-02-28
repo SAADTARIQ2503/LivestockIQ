@@ -1,9 +1,10 @@
 """
 API V1 URL Configuration
 """
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import animals, health, auth
+from .views import animals, health, auth, environment, alerts, costs
 from rest_framework_simplejwt.views import TokenRefreshView
 # Create router for viewsets
 router = DefaultRouter()

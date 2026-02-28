@@ -1,4 +1,4 @@
 # Python Virtual Environments
 venv/
-
+node_modules/
 .env

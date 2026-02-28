@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 
-WEATHER_API_KEY = settings.API_KEYS.get('OPENWEATHERMAP')
+WEATHER_API_KEY =  os.environ.get('OPENWEATHERMAP')
 FARM_LAT = os.environ.get('FARM_LATITUDE', '34.0522')
 FARM_LON = os.environ.get('FARM_LONGITUDE', '-118.2437')
 
