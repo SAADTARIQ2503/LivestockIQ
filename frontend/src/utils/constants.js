@@ -124,8 +124,11 @@ export const QUERY_KEYS = {
     overdue: ['health', 'schedules', 'overdue'],
   },
   environment: {
-    status: (location) => ['environment', 'status', location],
-    weather: (location) => ['environment', 'weather', location],
+    status: ['environment', 'status'],
+    statistics: ['environment', 'statistics'],
+    forecast: ['environment', 'forecast'],
+    alerts: ['environment', 'alerts'],
+    history: (filters) => ['environment', 'history', filters],
   },
   alerts: {
     all: (filters) => ['alerts', filters],
@@ -134,7 +137,10 @@ export const QUERY_KEYS = {
     unacknowledged: ['alerts', 'unacknowledged'],
   },
   costs: {
-    defaults: (type) => ['costs', 'defaults', type],
+    transactions: (filters) => ['costs', 'transactions', filters],
+    summary: ['costs', 'summary'],
+    report: (params) => ['costs', 'report', params],
+    breakdown: ['costs', 'breakdown'],
   },
 };
 

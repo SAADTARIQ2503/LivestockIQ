@@ -7,8 +7,19 @@ import Toast from './components/shared/Toast';
 // Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import Layout from './components/layout/Layout';
+import AnimalsList from './pages/animals/AnimalsList';
+import AddAnimal from './pages/animals/AddAnimal';
 import Dashboard from './pages/dashboard/Dashboard';
+import Layout from './components/layout/Layout';
+import VaccinationsList from './pages/vaccinations/VaccinationsList';
+import ScheduleVaccination from './pages/vaccinations/ScheduleVaccination';
+import RecommendedVaccines from './pages/vaccinations/RecommendedVaccines'; 
+import Environment from './pages/environment/Environment';
+import EditAnimal from './pages/animals/EditAnimal';
+import AnimalDetail from './pages/animals/AnimalDetail';
+import CostTracker from './pages/costs/CostTracker';
+import AddTransaction from './pages/costs/AddTransaction';
+import FinancialReport from './pages/costs/FinancialReport';
 
 import './index.css';
 
@@ -51,8 +62,6 @@ function App() {
           />
 
           {/* Protected Routes (Dashboard and Apps) */}
-          {/* TODO: Uncomment when Layout and Dashboard are created */}
-          {
           <Route
             path="/"
             element={
@@ -63,20 +72,30 @@ function App() {
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            {/* 
-            // Animals routes will go here
-            // Health routes will go here
-            // Environment routes will go here
-            // Alerts routes will go here
-            // Costs routes will go here */ }
-          </Route>
-          }
+            
+            {/* Future routes */}
+            <Route path="animals" element={<AnimalsList />} />
+            <Route path="animals/add" element={<AddAnimal />} />
+            <Route path="animals/edit/:id" element={<EditAnimal />} />
+            <Route path="animals/:id" element={<AnimalDetail />} />
 
-          {/* Temporary redirect to login for protected routes */}
-          <Route
-            path="/"
-            element={<Navigate to="/login" replace />}
-          />
+            {/* Vaccinations routes */}
+            <Route path="vaccinations" element={<VaccinationsList />} />
+            <Route path="vaccinations/schedule" element={<ScheduleVaccination />} />
+            <Route path="vaccinations/recommended" element={<RecommendedVaccines />} />
+            
+            {/* Environment routes */}
+            <Route path="environment" element={<Environment />} />
+
+
+            <Route path="costs" element={<CostTracker />} />
+            <Route path="costs/add" element={<AddTransaction />} />
+            <Route path="costs/report" element={<FinancialReport />} />
+            {/* <Route path="vaccinations" element={<Vaccinations />} /> */}
+            {/* <Route path="environment" element={<Environment />} /> */}
+            {/* <Route path="alerts" element={<Alerts />} /> */}
+            {/* <Route path="costs" element={<CostCalculator />} /> */}
+          </Route>
 
           {/* 404 - Not Found */}
           <Route

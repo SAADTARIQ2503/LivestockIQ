@@ -1,153 +1,205 @@
-"""
-Cost Calculation API Views
-"""
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Sum, Q, Count
+from django.db.models.functions import TruncMonth
+from costs.models import Transaction
+from api.v1.serializers.costs import TransactionSerializer
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def calculate_costs(request):
+class TransactionListCreateView(generics.ListCreateAPIView):
     """
-    Calculate livestock farming costs
-    POST /api/v1/costs/calculate/
-    
-    Body:
-    {
-        "animal_type": "Cow",
-        "quantity": 50,
-        "feed_cost_per_kg": 0.5,
-        "feed_consumption_kg_per_day": 10,
-        "veterinary_cost_per_month": 500,
-        "labor_cost_per_month": 2000,
-        "housing_cost_per_month": 1000,
-        "other_costs_per_month": 300,
-        "calculation_period_months": 12
-    }
+    GET: List all transactions for the authenticated user
+    POST: Create a new transaction
     """
-    # Extract inputs
-    animal_type = request.data.get('animal_type')
-    quantity = int(request.data.get('quantity', 1))
-    feed_cost_per_kg = float(request.data.get('feed_cost_per_kg', 0))
-    feed_consumption_per_day = float(request.data.get('feed_consumption_kg_per_day', 0))
-    vet_cost = float(request.data.get('veterinary_cost_per_month', 0))
-    labor_cost = float(request.data.get('labor_cost_per_month', 0))
-    housing_cost = float(request.data.get('housing_cost_per_month', 0))
-    other_costs = float(request.data.get('other_costs_per_month', 0))
-    period_months = int(request.data.get('calculation_period_months', 12))
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAuthenticated]
     
-    # Validate inputs
-    if not animal_type or animal_type not in ['Cow', 'Goat', 'Sheep']:
+    def get_queryset(self):
+        queryset = Transaction.objects.filter(user=self.request.user)
+        
+        # Filter by type if provided
+        transaction_type = self.request.query_params.get('type')
+        if transaction_type in ['expense', 'revenue']:
+            queryset = queryset.filter(type=transaction_type)
+        
+        # Filter by date range if provided
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+        
+        return queryset
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET: Retrieve a transaction
+    PUT/PATCH: Update a transaction
+    DELETE: Delete a transaction
+    """
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Transaction.objects.filter(user=self.request.user)
+
+
+class SummaryView(APIView):
+    """
+    GET: Financial summary (total revenue, expenses, profit)
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user_transactions = Transaction.objects.filter(user=request.user)
+        
+        # Get date range if provided
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            user_transactions = user_transactions.filter(date__gte=start_date)
+        if end_date:
+            user_transactions = user_transactions.filter(date__lte=end_date)
+        
+        # Calculate totals
+        total_revenue = user_transactions.filter(type='revenue').aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        
+        total_expenses = user_transactions.filter(type='expense').aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        
         return Response({
-            'error': 'Invalid animal_type. Must be Cow, Goat, or Sheep'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Calculate feed cost
-    days_per_month = 30
-    feed_cost_per_month = (
-        feed_cost_per_kg * 
-        feed_consumption_per_day * 
-        days_per_month * 
-        quantity
-    )
-    
-    # Calculate monthly totals
-    total_monthly = (
-        feed_cost_per_month +
-        vet_cost +
-        labor_cost +
-        housing_cost +
-        other_costs
-    )
-    
-    cost_per_animal_monthly = total_monthly / quantity if quantity > 0 else 0
-    
-    # Calculate yearly
-    total_yearly = total_monthly * 12
-    cost_per_animal_yearly = total_yearly / quantity if quantity > 0 else 0
-    
-    # Calculate for specified period
-    total_period = total_monthly * period_months
-    
-    # Cost breakdown percentage
-    cost_breakdown = {
-        'feed': round((feed_cost_per_month / total_monthly * 100), 2) if total_monthly > 0 else 0,
-        'veterinary': round((vet_cost / total_monthly * 100), 2) if total_monthly > 0 else 0,
-        'labor': round((labor_cost / total_monthly * 100), 2) if total_monthly > 0 else 0,
-        'housing': round((housing_cost / total_monthly * 100), 2) if total_monthly > 0 else 0,
-        'other': round((other_costs / total_monthly * 100), 2) if total_monthly > 0 else 0,
-    }
-    
-    response_data = {
-        'animal_type': animal_type,
-        'quantity': quantity,
-        
-        # Monthly
-        'feed_cost_per_month': round(feed_cost_per_month, 2),
-        'veterinary_cost_per_month': round(vet_cost, 2),
-        'labor_cost_per_month': round(labor_cost, 2),
-        'housing_cost_per_month': round(housing_cost, 2),
-        'other_costs_per_month': round(other_costs, 2),
-        'total_monthly_cost': round(total_monthly, 2),
-        'cost_per_animal_per_month': round(cost_per_animal_monthly, 2),
-        
-        # Yearly
-        'total_yearly_cost': round(total_yearly, 2),
-        'cost_per_animal_per_year': round(cost_per_animal_yearly, 2),
-        
-        # Period
-        'calculation_period_months': period_months,
-        'total_period_cost': round(total_period, 2),
-        
-        # Breakdown
-        'cost_breakdown': cost_breakdown,
-    }
-    
-    return Response(response_data)
+            'total_revenue': float(total_revenue),
+            'total_expenses': float(total_expenses),
+            'net_profit': float(total_revenue - total_expenses),
+        })
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_default_costs(request):
+class ReportView(APIView):
     """
-    Get default/recommended cost values by animal type
-    GET /api/v1/costs/defaults/?animal_type=Cow
+    GET: Generate detailed financial report
     """
-    animal_type = request.query_params.get('animal_type', 'Cow')
+    permission_classes = [IsAuthenticated]
     
-    # Default values (these can be adjusted based on real data)
-    defaults = {
-        'Cow': {
-            'feed_cost_per_kg': 0.5,
-            'feed_consumption_kg_per_day': 10,
-            'veterinary_cost_per_month': 500,
-            'labor_cost_per_animal_per_month': 40,
-            'housing_cost_per_animal_per_month': 20,
-        },
-        'Goat': {
-            'feed_cost_per_kg': 0.4,
-            'feed_consumption_kg_per_day': 2,
-            'veterinary_cost_per_month': 200,
-            'labor_cost_per_animal_per_month': 15,
-            'housing_cost_per_animal_per_month': 10,
-        },
-        'Sheep': {
-            'feed_cost_per_kg': 0.4,
-            'feed_consumption_kg_per_day': 2.5,
-            'veterinary_cost_per_month': 250,
-            'labor_cost_per_animal_per_month': 15,
-            'housing_cost_per_animal_per_month': 10,
-        }
-    }
-    
-    if animal_type not in defaults:
+    def get(self, request):
+        # Get date range
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if not start_date or not end_date:
+            return Response(
+                {'error': 'start_date and end_date are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user_transactions = Transaction.objects.filter(
+            user=request.user,
+            date__gte=start_date,
+            date__lte=end_date
+        )
+        
+        # Total revenue and expenses
+        total_revenue = user_transactions.filter(type='revenue').aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        
+        total_expenses = user_transactions.filter(type='expense').aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        
+        # Breakdown by category
+        expense_by_category = list(
+            user_transactions.filter(type='expense')
+            .values('category')
+            .annotate(total=Sum('amount'))
+            .order_by('-total')
+        )
+        
+        revenue_by_category = list(
+            user_transactions.filter(type='revenue')
+            .values('category')
+            .annotate(total=Sum('amount'))
+            .order_by('-total')
+        )
+        
+        # Monthly summary
+        monthly_summary = list(
+            user_transactions
+            .annotate(month=TruncMonth('date'))
+            .values('month')
+            .annotate(
+                revenue=Sum('amount', filter=Q(type='revenue')),
+                expenses=Sum('amount', filter=Q(type='expense'))
+            )
+            .order_by('month')
+        )
+        
+        # Format monthly summary
+        formatted_monthly = []
+        for item in monthly_summary:
+            formatted_monthly.append({
+                'month': item['month'].strftime('%b %Y'),
+                'revenue': float(item['revenue'] or 0),
+                'expenses': float(item['expenses'] or 0),
+            })
+        
+        # Top expenses and revenue
+        top_expenses = list(
+            user_transactions.filter(type='expense')
+            .order_by('-amount')[:5]
+            .values('id', 'description', 'category', 'amount', 'date')
+        )
+        
+        top_revenue = list(
+            user_transactions.filter(type='revenue')
+            .order_by('-amount')[:5]
+            .values('id', 'description', 'category', 'amount', 'date')
+        )
+        
         return Response({
-            'error': 'Invalid animal_type'
-        }, status=status.HTTP_400_BAD_REQUEST)
+            'total_revenue': float(total_revenue),
+            'total_expenses': float(total_expenses),
+            'net_profit': float(total_revenue - total_expenses),
+            'expense_by_category': expense_by_category,
+            'revenue_by_category': revenue_by_category,
+            'monthly_summary': formatted_monthly,
+            'top_expenses': top_expenses,
+            'top_revenue': top_revenue,
+        })
+
+
+class CategoryBreakdownView(APIView):
+    """
+    GET: Breakdown of transactions by category
+    """
+    permission_classes = [IsAuthenticated]
     
-    return Response({
-        'animal_type': animal_type,
-        'defaults': defaults[animal_type]
-    })
+    def get(self, request):
+        transaction_type = request.query_params.get('type')
+        
+        queryset = Transaction.objects.filter(user=request.user)
+        
+        if transaction_type:
+            queryset = queryset.filter(type=transaction_type)
+        
+        breakdown = list(
+            queryset
+            .values('category', 'type')
+            .annotate(
+                total=Sum('amount'),
+                count=Count('id')
+            )
+            .order_by('-total')
+        )
+        
+        return Response(breakdown)

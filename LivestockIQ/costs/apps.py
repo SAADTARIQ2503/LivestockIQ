@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 
 
-class CalculateCostConfig(AppConfig):
+class CostsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'calculate_cost'
+    name = 'costs'
+    verbose_name = 'Cost Tracking'

@@ -1,47 +1,29 @@
-"""
-Cost Calculation Serializers
-"""
 from rest_framework import serializers
+from costs.models import Transaction
 
 
-class CostCalculationInputSerializer(serializers.Serializer):
+class TransactionSerializer(serializers.ModelSerializer):
     """
-    Input for cost calculation
+    Serializer for Transaction model
     """
-    animal_type = serializers.ChoiceField(choices=['Cow', 'Goat', 'Sheep'])
-    quantity = serializers.IntegerField(min_value=1)
-    feed_cost_per_kg = serializers.FloatField(min_value=0)
-    feed_consumption_kg_per_day = serializers.FloatField(min_value=0)
-    veterinary_cost_per_month = serializers.FloatField(min_value=0, default=0)
-    labor_cost_per_month = serializers.FloatField(min_value=0, default=0)
-    housing_cost_per_month = serializers.FloatField(min_value=0, default=0)
-    other_costs_per_month = serializers.FloatField(min_value=0, default=0)
-    calculation_period_months = serializers.IntegerField(min_value=1, default=12)
-
-
-class CostCalculationOutputSerializer(serializers.Serializer):
-    """
-    Output for cost calculation
-    """
-    animal_type = serializers.CharField()
-    quantity = serializers.IntegerField()
+    class Meta:
+        model = Transaction
+        fields = [
+            'id', 
+            'type', 
+            'category', 
+            'amount', 
+            'description', 
+            'date', 
+            'animal', 
+            'notes', 
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
     
-    # Monthly costs
-    feed_cost_per_month = serializers.FloatField()
-    veterinary_cost_per_month = serializers.FloatField()
-    labor_cost_per_month = serializers.FloatField()
-    housing_cost_per_month = serializers.FloatField()
-    other_costs_per_month = serializers.FloatField()
-    total_monthly_cost = serializers.FloatField()
-    cost_per_animal_per_month = serializers.FloatField()
-    
-    # Yearly costs
-    total_yearly_cost = serializers.FloatField()
-    cost_per_animal_per_year = serializers.FloatField()
-    
-    # Period costs
-    calculation_period_months = serializers.IntegerField()
-    total_period_cost = serializers.FloatField()
-    
-    # Breakdown
-    cost_breakdown = serializers.DictField()
+    def validate_amount(self, value):
+        """Ensure amount is positive"""
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value

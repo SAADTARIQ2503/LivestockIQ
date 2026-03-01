@@ -49,7 +49,9 @@ urlpatterns = [
     path('alerts/statistics/', alerts.get_anomaly_statistics, name='anomaly-statistics'),
     path('alerts/unacknowledged/', alerts.get_unacknowledged_anomalies, name='unacknowledged-anomalies'),
     
-    # Cost calculation endpoints
-    path('costs/calculate/', costs.calculate_costs, name='calculate-costs'),
-    path('costs/defaults/', costs.get_default_costs, name='default-costs'),
+    path('costs/transactions/', costs.TransactionListCreateView.as_view(), name='transaction-list-create'),
+    path('costs/transactions/<int:pk>/', costs.TransactionDetailView.as_view(), name='transaction-detail'),
+    path('costs/summary/', costs.SummaryView.as_view(), name='costs-summary'),
+    path('costs/report/', costs.ReportView.as_view(), name='costs-report'),
+    path('costs/breakdown/', costs.CategoryBreakdownView.as_view(), name='costs-breakdown'),
 ]
