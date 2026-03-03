@@ -1,0 +1,15 @@
+# AI Dependencies
+torch>=2.2.0
+torchvision>=0.17.0
+Pillow>=10.0.0
+
+# Celery for async tasks
+celery==5.3.1
+redis==4.6.0
+
+# Existing Django dependencies
+Django>=4.2
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+python-dotenv

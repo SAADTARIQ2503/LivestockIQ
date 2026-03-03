@@ -20,6 +20,9 @@ import AnimalDetail from './pages/animals/AnimalDetail';
 import CostTracker from './pages/costs/CostTracker';
 import AddTransaction from './pages/costs/AddTransaction';
 import FinancialReport from './pages/costs/FinancialReport';
+import AlertsList from './pages/alerts/AlertsList';
+import AIDetection from './pages/ai-detection/AIDetection';
+import DetectionHistory from './pages/ai-detection/DetectionHistory';
 
 import './index.css';
 
@@ -91,6 +94,18 @@ function App() {
             <Route path="costs" element={<CostTracker />} />
             <Route path="costs/add" element={<AddTransaction />} />
             <Route path="costs/report" element={<FinancialReport />} />
+
+            
+            
+              {/* Alerts routes */}
+              <Route path="alerts" element={<AlertsList />} />
+
+              {/* AI Detection routes */}
+              <Route path="ai-detection" element={<AIDetection />} />
+              <Route path="ai-detection/history" element={<DetectionHistory />} />
+
+
+            
             {/* <Route path="vaccinations" element={<Vaccinations />} /> */}
             {/* <Route path="environment" element={<Environment />} /> */}
             {/* <Route path="alerts" element={<Alerts />} /> */}

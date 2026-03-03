@@ -1,190 +1,180 @@
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from datetime import datetime
-from collections import Counter
+from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from django.conf import settings
+from alerts.models import Alert, Detection
+from api.v1.serializers.alerts import AlertSerializer, DetectionSerializer
+from ai_service.disease_detector import DiseaseDetector
+from ai_service.tasks import detect_disease_task
+import os
 
 
-# Placeholder data - In production, this would come from CV model/database
-ANOMALY_DATA = [
-    {
-        'id': 'A001',
-        'animal_id': '10487',
-        'type': 'Excessive Lying/Lethargy',
-        'severity': 'High',
-        'date': '2025-11-18',
-        'time': '14:30',
-        'duration_minutes': 180,
-        'location': 'Pen B, Stall 5',
-        'reason': 'The animal remained motionless for 3 hours, far exceeding normal rest duration (Max 90 min).',
-        'action': 'Immediate veterinary check required. Isolate animal and monitor temperature.',
-        'is_acknowledged': False,
-        'acknowledged_at': None,
-        'acknowledged_by': None
-    },
-    {
-        'id': 'A002',
-        'animal_id': '10385',
-        'type': 'Reduced Feed Intake',
-        'severity': 'Medium',
-        'date': '2025-11-19',
-        'time': '07:00',
-        'duration_minutes': 60,
-        'location': 'Feeding Trough 3',
-        'reason': 'CV model detected only 15 minutes of feeding activity during the critical morning window (Normal > 45 min).',
-        'action': 'Check feed quality and competition at the trough. Monitor closely for 24 hours.',
-        'is_acknowledged': False,
-        'acknowledged_at': None,
-        'acknowledged_by': None
-    },
-    {
-        'id': 'A003',
-        'animal_id': '10489',
-        'type': 'Isolation/Separation',
-        'severity': 'Low',
-        'date': '2025-11-19',
-        'time': '11:15',
-        'duration_minutes': 45,
-        'location': 'Corner of Pen C',
-        'reason': 'Animal remained physically separated from the main group for an unusual duration.',
-        'action': 'Could be competition or early illness. Review historical location data. No immediate action.',
-        'is_acknowledged': True,
-        'acknowledged_at': '2025-11-19T12:00:00Z',
-        'acknowledged_by': 'John Doe'
-    },
-]
+class AlertListCreateView(generics.ListCreateAPIView):
+    """List and create alerts"""
+    serializer_class = AlertSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = Alert.objects.filter(user=self.request.user)
+        
+        # Filter by severity
+        severity = self.request.query_params.get('severity')
+        if severity:
+            queryset = queryset.filter(severity=severity)
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter == 'active':
+            queryset = queryset.filter(is_resolved=False)
+        elif status_filter == 'resolved':
+            queryset = queryset.filter(is_resolved=True)
+        
+        return queryset
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_anomalies(request):
-    """
-    Get all anomalies with optional filtering
-    GET /api/v1/alerts/?severity=High&acknowledged=false
-    """
-    anomalies = ANOMALY_DATA.copy()
+class AlertDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Get, update, or delete alert"""
+    serializer_class = AlertSerializer
+    permission_classes = [IsAuthenticated]
     
-    # Filter by severity
-    severity = request.query_params.get('severity')
-    if severity:
-        anomalies = [a for a in anomalies if a['severity'] == severity]
-    
-    # Filter by acknowledged status
-    acknowledged = request.query_params.get('acknowledged')
-    if acknowledged is not None:
-        is_ack = acknowledged.lower() == 'true'
-        anomalies = [a for a in anomalies if a['is_acknowledged'] == is_ack]
-    
-    # Filter by animal_id
-    animal_id = request.query_params.get('animal_id')
-    if animal_id:
-        anomalies = [a for a in anomalies if a['animal_id'] == animal_id]
-    
-    # Sort by severity (High → Medium → Low)
-    severity_order = {'High': 0, 'Medium': 1, 'Low': 2}
-    anomalies.sort(key=lambda x: severity_order.get(x['severity'], 3))
-    
-    return Response({
-        'count': len(anomalies),
-        'results': anomalies
-    })
+    def get_queryset(self):
+        return Alert.objects.filter(user=self.request.user)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_anomaly_detail(request, anomaly_id):
-    """
-    Get detailed information for a specific anomaly
-    GET /api/v1/alerts/{anomaly_id}/
-    """
-    anomaly = next((item for item in ANOMALY_DATA if item['id'] == anomaly_id), None)
+class ResolveAlertView(APIView):
+    """Resolve an alert"""
+    permission_classes = [IsAuthenticated]
     
-    if not anomaly:
-        return Response({
-            'error': f'Anomaly {anomaly_id} not found'
-        }, status=status.HTTP_404_NOT_FOUND)
-    
-    return Response(anomaly)
+    def patch(self, request, pk):
+        try:
+            alert = Alert.objects.get(pk=pk, user=request.user)
+            alert.is_resolved = True
+            alert.resolved_at = timezone.now()
+            alert.save()
+            
+            return Response({
+                'message': 'Alert resolved successfully',
+                'alert': AlertSerializer(alert).data
+            })
+        except Alert.DoesNotExist:
+            return Response(
+                {'error': 'Alert not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def acknowledge_anomaly(request, anomaly_id):
-    """
-    Acknowledge an anomaly
-    POST /api/v1/alerts/{anomaly_id}/acknowledge/
-    Body: {"notes": "Checked animal, administering treatment"}
-    """
-    anomaly = next((item for item in ANOMALY_DATA if item['id'] == anomaly_id), None)
+class ActiveAlertsView(generics.ListAPIView):
+    """Get active alerts"""
+    serializer_class = AlertSerializer
+    permission_classes = [IsAuthenticated]
     
-    if not anomaly:
-        return Response({
-            'error': f'Anomaly {anomaly_id} not found'
-        }, status=status.HTTP_404_NOT_FOUND)
-    
-    # Update anomaly
-    anomaly['is_acknowledged'] = True
-    anomaly['acknowledged_at'] = datetime.now().isoformat()
-    anomaly['acknowledged_by'] = request.user.username
-    
-    notes = request.data.get('notes', '')
-    if notes:
-        anomaly['notes'] = notes
-    
-    return Response({
-        'message': f'Anomaly {anomaly_id} acknowledged successfully',
-        'data': anomaly
-    })
+    def get_queryset(self):
+        return Alert.objects.filter(user=self.request.user, is_resolved=False)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_anomaly_statistics(request):
-    """
-    Get statistics about anomalies
-    GET /api/v1/alerts/statistics/
-    """
-    total = len(ANOMALY_DATA)
-    high = sum(1 for a in ANOMALY_DATA if a['severity'] == 'High')
-    medium = sum(1 for a in ANOMALY_DATA if a['severity'] == 'Medium')
-    low = sum(1 for a in ANOMALY_DATA if a['severity'] == 'Low')
-    acknowledged = sum(1 for a in ANOMALY_DATA if a['is_acknowledged'])
-    unacknowledged = total - acknowledged
+class DetectDiseaseView(APIView):
+    """Upload and detect disease"""
+    permission_classes = [IsAuthenticated]
     
-    # Count by type
-    types = [a['type'] for a in ANOMALY_DATA]
-    by_type = dict(Counter(types))
-    
-    # Get recent unacknowledged anomalies
-    recent = [a for a in ANOMALY_DATA if not a['is_acknowledged']][:5]
-    
-    return Response({
-        'total_anomalies': total,
-        'high_severity': high,
-        'medium_severity': medium,
-        'low_severity': low,
-        'acknowledged': acknowledged,
-        'unacknowledged': unacknowledged,
-        'by_type': by_type,
-        'recent_anomalies': recent
-    })
+    def post(self, request):
+        file = request.FILES.get('file')
+        animal_id = request.data.get('animal_id')
+        
+        if not file:
+            return Response(
+                {'error': 'No file provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Determine if image or video
+        is_video = file.content_type.startswith('video/')
+        
+        # Create detection record
+        detection = Detection.objects.create(
+            user=request.user,
+            animal_id=animal_id if animal_id else None,
+            image=file if not is_video else None,
+            video=file if is_video else None,
+            predicted_disease='healthy',  # Placeholder
+            confidence=0.0  # Placeholder
+        )
+        
+        # Check if using Celery or sync
+        use_celery = getattr(settings, 'USE_CELERY', False)
+        
+        if use_celery:
+            # Async processing with Celery
+            task = detect_disease_task.delay(detection.id)
+            
+            return Response({
+                'detection_id': detection.id,
+                'task_id': task.id,
+                'message': 'Processing started. Check status with detection_id.'
+            }, status=status.HTTP_202_ACCEPTED)
+        else:
+            # Synchronous processing
+            try:
+                model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'cow_disease_model_fold_5.pth')
+                
+                if not os.path.exists(model_path):
+                    return Response(
+                        {'error': 'AI model not found. Please contact administrator.'},
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE
+                    )
+                
+                detector = DiseaseDetector(model_path)
+                result = detector.predict(detection.image.path)
+                
+                # Update detection
+                detection.predicted_disease = result['disease']
+                detection.confidence = result['confidence']
+                detection.all_probabilities = result['all_probabilities']
+                detection.processing_time = result['processing_time']
+                detection.save()
+                
+                # Create alert if disease detected
+                if result['disease'] != 'healthy' and result['confidence'] > 0.7:
+                    severity = 'critical' if result['confidence'] > 0.9 else 'warning'
+                    
+                    Alert.objects.create(
+                        user=request.user,
+                        title=f"{result['disease'].replace('-', ' ').title()} Detected",
+                        message=f"AI detected {result['disease']} with {result['confidence']*100:.1f}% confidence.",
+                        severity=severity,
+                        animal_id=animal_id if animal_id else None,
+                        detection=detection
+                    )
+                
+                return Response({
+                    'detection_id': detection.id,
+                    'result': result
+                })
+                
+            except Exception as e:
+                return Response(
+                    {'error': str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_unacknowledged_anomalies(request):
-    """
-    Get all unacknowledged anomalies (for notifications)
-    GET /api/v1/alerts/unacknowledged/
-    """
-    unacknowledged = [a for a in ANOMALY_DATA if not a['is_acknowledged']]
+class DetectionHistoryView(generics.ListAPIView):
+    """Get detection history"""
+    serializer_class = DetectionSerializer
+    permission_classes = [IsAuthenticated]
     
-    # Sort by severity
-    severity_order = {'High': 0, 'Medium': 1, 'Low': 2}
-    unacknowledged.sort(key=lambda x: severity_order.get(x['severity'], 3))
+    def get_queryset(self):
+        return Detection.objects.filter(user=self.request.user)
+
+
+class DetectionDetailView(generics.RetrieveAPIView):
+    """Get single detection"""
+    serializer_class = DetectionSerializer
+    permission_classes = [IsAuthenticated]
     
-    return Response({
-        'count': len(unacknowledged),
-        'results': unacknowledged
-    })
+    def get_queryset(self):
+        return Detection.objects.filter(user=self.request.user)
