@@ -17,21 +17,75 @@ class VaccinationSchedule(models.Model):
             return f"{self.animal.id} - {self.vaccine_name} on {self.schedule_date}"
         
 
-class VaccineDataset(models.Model):
-    SPECIES_CHOICES = [
-        ('Cow', 'Cow'),
-        ('Goat', 'Goat'),
-        ('Sheep', 'Sheep'),
-    ]
+"""
+VaccineDataset model — updated to store all columns from
+Livestock_Vaccination_FINAL.xlsx
 
-    species = models.CharField(max_length=50, choices=SPECIES_CHOICES)
-    vaccine_name = models.CharField(max_length=255)
-    disease = models.CharField(max_length=255)
-    min_age_months = models.FloatField(default=0, help_text="Minimum age in months")
-    dosage_frequency = models.CharField(max_length=100)
-    seasonality = models.CharField(max_length=100, null=True, blank=True)
-    booster_rule = models.CharField(max_length=255, null=True, blank=True)
-    mandatory_conditions = models.TextField(null=True, blank=True)
+Columns from Excel:
+  Animal Species | Disease Name | Vaccine Name | Age at First Dose
+  Booster Dose   | Subsequent Dose | Vaccination Season/Month | Related Information
+"""
+
+
+
+
+class VaccineDataset(models.Model):
+    """
+    Stores the vaccine reference dataset loaded from Excel.
+    Used by the LSH recommendation engine.
+    """
+
+    animal_species = models.CharField(
+    max_length=255,
+    default='',
+    blank=True,
+    help_text="e.g. 'Cattle, Buffalo', 'Calves', 'Sheep & Goats'",
+    )
+    disease_name = models.CharField(
+    max_length=255,
+    default='',
+    help_text="e.g. 'FMD Foot and Mouth Disease'",
+    )   
+    vaccine_name = models.CharField(
+        max_length=255,
+        default='',
+        help_text="e.g. 'Inactivated FMD vaccine'",
+    )
+    age_at_first_dose = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="e.g. '6-8 weeks', '40-60 days prior to calving'",
+    )
+    booster_dose = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Booster dose schedule if applicable",
+    )
+    subsequent_dose = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="e.g. 'Annual', 'Every 6 months'",
+    )
+    vaccination_season = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="e.g. 'FEB-MAR SEP-OCT', 'Spring', 'Annual'",
+    )
+    related_information = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Dosage, type, manufacturer info from dataset",
+    )
+
+    class Meta:
+        db_table = "vaccine_dataset"
+        ordering = ["animal_species", "disease_name"]
+        verbose_name = "Vaccine Dataset Entry"
+        verbose_name_plural = "Vaccine Dataset Entries"
 
     def __str__(self):
-        return f"{self.species} - {self.vaccine_name}"
+        return f"{self.vaccine_name} ({self.animal_species}) — {self.disease_name}"

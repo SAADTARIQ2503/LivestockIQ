@@ -20,7 +20,7 @@ def detect_disease_task(detection_id):
         detection = Detection.objects.get(id=detection_id)
         
         # Get model path
-        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'vit_fold_1.pth')
+        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'model_vit.pth')
         
         # Initialize detector
         detector = DiseaseDetector(model_path)

@@ -12,8 +12,9 @@ import AddAnimal from './pages/animals/AddAnimal';
 import Dashboard from './pages/dashboard/Dashboard';
 import Layout from './components/layout/Layout';
 import VaccinationsList from './pages/vaccinations/VaccinationsList';
-import ScheduleVaccination from './pages/vaccinations/ScheduleVaccination';
-import RecommendedVaccines from './pages/vaccinations/RecommendedVaccines'; 
+import ScheduleVaccination from './pages/vaccinations/ScheduleVaccination'; 
+import VaccineRecommendations from './pages/vaccinations/RecommendedVaccines.jsx';
+VaccineRecommendations
 import Environment from './pages/environment/Environment';
 import EditAnimal from './pages/animals/EditAnimal';
 import AnimalDetail from './pages/animals/AnimalDetail';
@@ -85,8 +86,8 @@ function App() {
             {/* Vaccinations routes */}
             <Route path="vaccinations" element={<VaccinationsList />} />
             <Route path="vaccinations/schedule" element={<ScheduleVaccination />} />
-            <Route path="vaccinations/recommended" element={<RecommendedVaccines />} />
-            
+            {/* <Route path="vaccinations/recommended" element={<RecommendedVaccines />} /> */}
+            <Route path="/vaccinations/recommended" element={<VaccineRecommendations />} />
             {/* Environment routes */}
             <Route path="environment" element={<Environment />} />
 

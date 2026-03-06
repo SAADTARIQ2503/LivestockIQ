@@ -37,10 +37,17 @@ urlpatterns = [
     path('auth/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     
     # Health/Vaccination endpoints
-    path('health/vaccines/', health.VaccineListView.as_view(), name='vaccine-list'),
-    path('health/vaccines/recommended/', health.RecommendedVaccinesView.as_view(), name='recommended-vaccines'),
-    path('health/vaccines/<slug:slug>/', health.VaccineDetailView.as_view(), name='vaccine-detail'),
-    path('health/vaccines/by-species/', health.VaccinesBySpeciesView.as_view(), name='vaccines-by-species'),
+    # path('health/vaccines/', health.VaccineListView.as_view(), name='vaccine-list'),
+    # path('health/vaccines/recommended/', health.RecommendedVaccinesView.as_view(), name='recommended-vaccines'),
+    # path('health/vaccines/<slug:slug>/', health.VaccineDetailView.as_view(), name='vaccine-detail'),
+    # path('health/vaccines/by-species/', health.VaccinesBySpeciesView.as_view(), name='vaccines-by-species'),
+    # path('vaccines/recommend/', health.VaccineRecommendationView.as_view()),
+    # path('health/vaccines/recommend/', health.VaccineRecommendationView.as_view()),
+    path('health/vaccines/recommended/', health.RecommendedVaccinesView.as_view()),
+    path('health/vaccines/recommend/', health.VaccineRecommendationView.as_view()),  # LSH
+    path('health/vaccines/by-species/', health.VaccinesBySpeciesView.as_view()),
+    path('health/vaccines/<int:id>/', health.VaccineDetailView.as_view()),  # int: prevents "recommend" matching
+    path('health/vaccines/', health.VaccineListView.as_view()),
     
     
     # Router URLs (includes animals and schedules)
@@ -50,6 +57,9 @@ urlpatterns = [
     path('environment/weather/', environment.get_weather_data, name='weather-data'),
     path('environment/status/', environment.get_environment_status, name='environment-status'),
     path('environment/coordinates/', environment.get_coordinates_for_location, name='coordinates'),
+    path('environment/statistics/', environment.EnvironmentStatisticsView.as_view(), name='environment-statistics'),
+    path('environment/forecast/',   environment.EnvironmentForecastView.as_view(),   name='environment-forecast'),
+    path('environment/alerts/',     environment.EnvironmentAlertsView.as_view(),     name='environment-alerts'),
     
     # # Alerts endpoints
     # path('alerts/', alerts.get_anomalies, name='anomalies-list'),
@@ -68,6 +78,9 @@ urlpatterns = [
     path('ai/detect/', alerts.DetectDiseaseView.as_view(), name='ai-detect'),
     path('ai/history/', alerts.DetectionHistoryView.as_view(), name='detection-history'),
     path('ai/detections/<int:pk>/', alerts.DetectionDetailView.as_view(), name='detection-detail'),
+    path('health/lameness/detect/',  health.LamenessDetectionView.as_view()),
+    path('health/lameness/history/', health.LamenessDetectionHistoryView.as_view()),
+
     
     path('costs/transactions/', costs.TransactionListCreateView.as_view(), name='transaction-list-create'),
     path('costs/transactions/<int:pk>/', costs.TransactionDetailView.as_view(), name='transaction-detail'),

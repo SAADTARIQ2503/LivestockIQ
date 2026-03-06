@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVaccinations } from '@/hooks/useVaccinations';
 import { useAnimals } from '@/hooks/useAnimals';
+import { healthAPI } from '@/api/health';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, Syringe } from 'lucide-react';
 
 /**
  * Schedule Vaccination Page
@@ -27,8 +28,63 @@ export default function ScheduleVaccination() {
 
   const [errors, setErrors] = useState({});
 
-  // Get today's date for min date validation
+  // Vaccine dropdown state
+  const [vaccines, setVaccines] = useState([]);
+  const [isLoadingVaccines, setIsLoadingVaccines] = useState(false);
+  const [vaccineSearch, setVaccineSearch] = useState('');
+  const [selectedVaccineLabel, setSelectedVaccineLabel] = useState('');
+
   const today = new Date().toISOString().split('T')[0];
+  const animalsList = Array.isArray(animals) ? animals : (animals?.results || []);
+
+  // Derive the selected animal's type to filter vaccines by species
+  const selectedAnimal = animalsList.find(a => String(a.id) === String(formData.animal));
+  const selectedSpecies = selectedAnimal?.animal_type || '';
+
+  /**
+   * Fetch vaccines whenever species changes (or on mount for group vaccinations)
+   */
+  useEffect(() => {
+    const fetchVaccines = async () => {
+      setIsLoadingVaccines(true);
+      setVaccines([]);
+      // Reset vaccine selection when species changes
+      setFormData(prev => ({ ...prev, vaccine_name: '' }));
+      setSelectedVaccineLabel('');
+      try {
+        let response;
+        if (selectedSpecies) {
+          response = await healthAPI.getVaccinesBySpecies(selectedSpecies);
+          // getVaccinesBySpecies returns { species, vaccines: [name, ...] }
+          const names = response?.data?.vaccines || [];
+          setVaccines(names.map(name => ({ value: name, label: name })));
+        } else {
+          // No species selected (group vaccination or no animal chosen yet) — load all
+          response = await healthAPI.getSchedules({});
+          // Fall back to full vaccine list endpoint
+          const allRes = await healthAPI.getVaccineDetail && fetch('/api/v1/health/vaccines/');
+          // Use the dedicated list endpoint via healthAPI
+          const listRes = await import('@/api/axios').then(m =>
+            m.default.get('/health/vaccines/')
+          );
+          const allVaccines = listRes?.data?.results || listRes?.data || [];
+          const unique = [...new Map(allVaccines.map(v => [v.vaccine_name, v])).values()];
+          setVaccines(unique.map(v => ({
+            value: v.vaccine_name,
+            label: v.vaccine_name,
+            disease: v.disease_name,  // ← was v.disease
+          })));
+        }
+      } catch (err) {
+        console.error('Failed to load vaccines:', err);
+        setVaccines([]);
+      } finally {
+        setIsLoadingVaccines(false);
+      }
+    };
+
+    fetchVaccines();
+  }, [selectedSpecies, formData.is_group]);
 
   /**
    * Handle input change
@@ -40,14 +96,29 @@ export default function ScheduleVaccination() {
       [name]: type === 'checkbox' ? checked : value,
     }));
 
-    // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: '',
-      }));
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
+
+  /**
+   * Handle vaccine selection from dropdown
+   */
+  const handleVaccineSelect = (vaccineName) => {
+    setFormData(prev => ({ ...prev, vaccine_name: vaccineName }));
+    setSelectedVaccineLabel(vaccineName);
+    setVaccineSearch('');
+    if (errors.vaccine_name) {
+      setErrors(prev => ({ ...prev, vaccine_name: '' }));
+    }
+  };
+
+  /**
+   * Filtered vaccine list based on search input
+   */
+  const filteredVaccines = vaccines.filter(v =>
+    v.label.toLowerCase().includes(vaccineSearch.toLowerCase())
+  );
 
   /**
    * Validate form
@@ -60,7 +131,7 @@ export default function ScheduleVaccination() {
     }
 
     if (!formData.vaccine_name) {
-      newErrors.vaccine_name = 'Vaccine name is required';
+      newErrors.vaccine_name = 'Please select a vaccine';
     }
 
     if (!formData.schedule_date) {
@@ -77,9 +148,7 @@ export default function ScheduleVaccination() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     const submitData = {
       vaccine_name: formData.vaccine_name,
@@ -88,16 +157,12 @@ export default function ScheduleVaccination() {
       is_group: formData.is_group,
     };
 
-    // Add animal ID only if not a group vaccination
     if (!formData.is_group && formData.animal) {
       submitData.animal = parseInt(formData.animal);
     }
 
     createSchedule(submitData);
   };
-
-  // Get animals list for dropdown
-  const animalsList = Array.isArray(animals) ? animals : (animals?.results || []);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -126,6 +191,7 @@ export default function ScheduleVaccination() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+
             {/* Group Vaccination Toggle */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -176,26 +242,99 @@ export default function ScheduleVaccination() {
               </div>
             )}
 
-            {/* Vaccine Name */}
+            {/* Vaccine Dropdown */}
             <div className="space-y-2">
               <Label htmlFor="vaccine_name">
-                Vaccine Name <span className="text-red-500">*</span>
+                Vaccine <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="vaccine_name"
-                name="vaccine_name"
-                type="text"
-                placeholder="e.g., FMD, HS, PPR, Anthrax"
-                value={formData.vaccine_name}
-                onChange={handleChange}
-                className={errors.vaccine_name ? 'border-red-500' : ''}
-              />
+
+              {/* Selected vaccine display */}
+              {formData.vaccine_name && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/30 rounded-md">
+                  <Syringe size={16} className="text-primary shrink-0" />
+                  <span className="text-sm font-medium text-primary flex-1">{formData.vaccine_name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, vaccine_name: '' }));
+                      setSelectedVaccineLabel('');
+                    }}
+                    className="text-gray-400 hover:text-red-500 text-xs ml-auto"
+                  >
+                    ✕ Clear
+                  </button>
+                </div>
+              )}
+
+              {/* Search + dropdown list */}
+              {isLoadingVaccines ? (
+                <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 border border-input rounded-md">
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  Loading vaccines{selectedSpecies ? ` for ${selectedSpecies}` : ''}...
+                </div>
+              ) : (
+                <div className="border border-input rounded-md overflow-hidden">
+                  {/* Search bar inside dropdown */}
+                  <div className="px-3 py-2 border-b border-input bg-gray-50">
+                    <Input
+                      placeholder={
+                        vaccines.length === 0
+                          ? 'No vaccines found — select an animal first'
+                          : `Search ${vaccines.length} vaccine${vaccines.length !== 1 ? 's' : ''}${selectedSpecies ? ` for ${selectedSpecies}` : ''}...`
+                      }
+                      value={vaccineSearch}
+                      onChange={e => setVaccineSearch(e.target.value)}
+                      className="h-8 border-0 bg-transparent focus-visible:ring-0 px-0 text-sm"
+                      disabled={vaccines.length === 0}
+                    />
+                  </div>
+
+                  {/* Scrollable list */}
+                  <div className="max-h-48 overflow-y-auto">
+                    {filteredVaccines.length > 0 ? (
+                      filteredVaccines.map((vaccine) => (
+                        <button
+                          key={vaccine.value}
+                          type="button"
+                          onClick={() => handleVaccineSelect(vaccine.value)}
+                          className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-primary/5 transition-colors ${formData.vaccine_name === vaccine.value
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'text-gray-700'
+                            }`}
+                        >
+                          <span>{vaccine.label}</span>
+                          {vaccine.disease && (
+                            <span className="text-xs text-gray-400 ml-2 shrink-0">
+                              {vaccine.disease}
+                            </span>
+                          )}
+                          {formData.vaccine_name === vaccine.value && (
+                            <span className="text-primary ml-2">✓</span>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-3 py-4 text-sm text-gray-400 text-center">
+                        {vaccines.length === 0
+                          ? 'Select an animal above to load available vaccines'
+                          : `No vaccines match "${vaccineSearch}"`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Species hint */}
+              {selectedSpecies && !isLoadingVaccines && (
+                <p className="text-xs text-gray-500">
+                  Showing vaccines for <span className="font-medium">{selectedSpecies}</span>.
+                  {' '}Deselect the animal to browse all vaccines.
+                </p>
+              )}
+
               {errors.vaccine_name && (
                 <p className="text-sm text-red-500">{errors.vaccine_name}</p>
               )}
-              <p className="text-sm text-gray-500">
-                Enter the name of the vaccine to be administered
-              </p>
             </div>
 
             {/* Schedule Date */}
@@ -222,9 +361,7 @@ export default function ScheduleVaccination() {
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label htmlFor="notes">
-                Notes (Optional)
-              </Label>
+              <Label htmlFor="notes">Notes (Optional)</Label>
               <textarea
                 id="notes"
                 name="notes"
@@ -252,11 +389,7 @@ export default function ScheduleVaccination() {
 
             {/* Actions */}
             <div className="flex gap-4">
-              <Button
-                type="submit"
-                disabled={isCreating}
-                className="flex-1"
-              >
+              <Button type="submit" disabled={isCreating} className="flex-1">
                 {isCreating ? 'Scheduling...' : 'Schedule Vaccination'}
               </Button>
               <Button
@@ -282,10 +415,7 @@ export default function ScheduleVaccination() {
                 Check our recommended vaccines based on season and animal type
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/vaccinations/recommended')}
-            >
+            <Button variant="outline" onClick={() => navigate('/vaccinations/recommended')}>
               View Recommended
             </Button>
           </div>

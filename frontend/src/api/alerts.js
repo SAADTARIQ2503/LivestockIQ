@@ -60,7 +60,13 @@ export const aiDetectionAPI = {
       'Content-Type': 'multipart/form-data',
     },
   }),
+  detectLameness: (formData) =>
+    axios.post('/health/lameness/detect/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
+  getLamenessHistory: () =>
+    axios.get('/health/lameness/history/'),
   /**
    * Get detection history
    * @returns {Promise} API response with past detections

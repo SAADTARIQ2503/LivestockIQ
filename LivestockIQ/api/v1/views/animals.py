@@ -5,7 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q, Count
+from django.db.models import Q
 from animals.models import Animal
 from health.models import VaccineDataset
 from api.v1.serializers import (
@@ -13,66 +13,83 @@ from api.v1.serializers import (
     AnimalListSerializer,
     AnimalCreateSerializer,
     VaccineBySpeciesSerializer,
-    AnimalStatisticsSerializer
+    AnimalStatisticsSerializer,
 )
 
 
 class AnimalViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for Animal CRUD operations
-    
-    list: GET /api/v1/animals/
-    create: POST /api/v1/animals/
-    retrieve: GET /api/v1/animals/{id}/
-    update: PUT /api/v1/animals/{id}/
+    ViewSet for Animal CRUD operations.
+
+    list:           GET  /api/v1/animals/
+    create:         POST /api/v1/animals/
+    retrieve:       GET  /api/v1/animals/{id}/
+    update:         PUT  /api/v1/animals/{id}/
     partial_update: PATCH /api/v1/animals/{id}/
-    destroy: DELETE /api/v1/animals/{id}/
+    destroy:        DELETE /api/v1/animals/{id}/
     """
     permission_classes = [IsAuthenticated]
-    
+
     def get_queryset(self):
-        """
-        Return only animals belonging to current user
-        """
-        return Animal.objects.filter(user=self.request.user).order_by('-id')
-    
+        """Return only animals belonging to the current user."""
+        queryset = Animal.objects.filter(user=self.request.user).order_by('-id')
+
+        # Support optional query-param filters on the list endpoint
+        animal_type = self.request.query_params.get('animal_type')
+        sex = self.request.query_params.get('sex')
+        is_healthy = self.request.query_params.get('is_healthy')
+
+        if animal_type:
+            queryset = queryset.filter(animal_type__iexact=animal_type)
+        if sex:
+            queryset = queryset.filter(sex__iexact=sex)
+        if is_healthy is not None and is_healthy != '':
+            queryset = queryset.filter(is_healthy=is_healthy.lower() == 'true')
+
+        return queryset
+
     def get_serializer_class(self):
-        """
-        Use different serializers for different actions
-        """
         if self.action == 'list':
             return AnimalListSerializer
-        elif self.action == 'create':
+        elif self.action in ['create', 'update', 'partial_update']:
             return AnimalCreateSerializer
         return AnimalSerializer
-    
+
     def create(self, request, *args, **kwargs):
-        """
-        Create a new animal
-        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         animal = serializer.save()
-        
+
         return Response({
             'message': f'Animal {animal.id} added successfully!',
-            'data': AnimalSerializer(animal).data
+            'data': AnimalSerializer(animal, context={'request': request}).data,
         }, status=status.HTTP_201_CREATED)
-    
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        animal = serializer.save()
+
+        return Response({
+            'message': f'Animal {animal.id} updated successfully!',
+            'data': AnimalSerializer(animal, context={'request': request}).data,
+        })
+
     @action(detail=False, methods=['get'])
     def search(self, request):
         """
-        Search animals with filters
+        Search animals with filters.
         GET /api/v1/animals/search/?animal_type=Cow&sex=Male&age=2
         """
         queryset = self.get_queryset()
-        
-        # Apply filters
+
         animal_type = request.query_params.get('animal_type')
         sex = request.query_params.get('sex')
         age = request.query_params.get('age')
         is_healthy = request.query_params.get('is_healthy')
-        
+
         if animal_type:
             queryset = queryset.filter(animal_type__icontains=animal_type)
         if sex:
@@ -80,72 +97,58 @@ class AnimalViewSet(viewsets.ModelViewSet):
         if age:
             queryset = queryset.filter(age=age)
         if is_healthy is not None:
-            is_healthy_bool = is_healthy.lower() == 'true'
-            queryset = queryset.filter(is_healthy=is_healthy_bool)
-        
+            queryset = queryset.filter(is_healthy=is_healthy.lower() == 'true')
+
         serializer = AnimalListSerializer(queryset, many=True)
-        
-        return Response({
-            'count': queryset.count(),
-            'results': serializer.data
-        })
-    
+        return Response({'count': queryset.count(), 'results': serializer.data})
+
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """
-        Get animal statistics
         GET /api/v1/animals/statistics/
         """
         queryset = self.get_queryset()
-        
+
         total = queryset.count()
         healthy = queryset.filter(is_healthy=True).count()
-        unhealthy = total - healthy
-        
-        # Group by type
-        by_type = {}
-        for animal_type in ['Cow', 'Goat', 'Sheep']:
-            by_type[animal_type] = queryset.filter(animal_type=animal_type).count()
-        
-        # Group by sex
+
+        by_type = {
+            t: queryset.filter(animal_type=t).count()
+            for t in ['Cow', 'Goat', 'Sheep']
+        }
         by_sex = {
             'Male': queryset.filter(sex='Male').count(),
-            'Female': queryset.filter(sex='Female').count()
+            'Female': queryset.filter(sex='Female').count(),
         }
-        
-        # Animals needing vaccination
-        needing_vaccination = queryset.filter(is_healthy=False).count()
-        
+
         stats = {
             'total_animals': total,
             'healthy_animals': healthy,
-            'unhealthy_animals': unhealthy,
+            'unhealthy_animals': total - healthy,
             'animals_by_type': by_type,
             'animals_by_sex': by_sex,
-            'vaccination_needed': needing_vaccination
+            'vaccination_needed': queryset.filter(is_healthy=False).count(),
         }
-        
+
         serializer = AnimalStatisticsSerializer(stats)
         return Response(serializer.data)
-    
+
     @action(detail=False, methods=['get'])
     def vaccines_by_species(self, request):
         """
-        Get available vaccines for a species
         GET /api/v1/animals/vaccines-by-species/?species=Cow
         """
         species = request.query_params.get('species')
-        
+
         if not species:
-            return Response({
-                'error': 'Species parameter is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {'error': 'Species parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # ✅ Correct field name: animal_species (not species)
         vaccines = VaccineDataset.objects.filter(
-            species__iexact=species
+            animal_species__icontains=species
         ).values_list('vaccine_name', flat=True).distinct().order_by('vaccine_name')
-        
-        return Response({
-            'species': species,
-            'vaccines': list(vaccines)
-        })
+
+        return Response({'species': species, 'vaccines': list(vaccines)})

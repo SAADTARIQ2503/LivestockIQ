@@ -258,8 +258,8 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
 # Set to False for sync (demo), True for async (production)
-# USE_CELERY = False  # Change to True when Redis is running
-USE_CELERY = True  # Change to True when Redis is running
+USE_CELERY = False  # Change to True when Redis is running
+# USE_CELERY = True  # Change to True when Redis is running
 
 # Media files configuration
 MEDIA_URL = '/media/'

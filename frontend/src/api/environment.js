@@ -6,48 +6,48 @@ import axios from './axios';
 export const environmentAPI = {
   /**
    * Get current environmental status
-   * @returns {Promise} API response with current conditions
+   * @param {string} city - Optional city name to search
    */
-  getCurrentStatus: () => axios.get('/environment/status/'),
-
-  /**
-   * Get environmental history
-   * @param {Object} params - Query parameters (date range, filters)
-   * @returns {Promise} API response with historical data
-   */
-  getHistory: (params) => axios.get('/environment/history/', { params }),
+  getCurrentStatus: (city) =>
+    axios.get('/environment/status/', { params: city ? { city } : {} }),
 
   /**
    * Get environmental statistics
-   * @returns {Promise} API response with stats
+   * @param {string} city - Optional city name
    */
-  getStatistics: () => axios.get('/environment/statistics/'),
+  getStatistics: (city) =>
+    axios.get('/environment/statistics/', { params: city ? { city } : {} }),
 
   /**
    * Get weather forecast
-   * @param {number} days - Number of days to forecast
-   * @returns {Promise} API response with forecast
+   * @param {number} days - Number of days (max 5 on free OWM tier)
+   * @param {string} city - Optional city name
    */
-  getForecast: (days = 7) => axios.get('/environment/forecast/', { params: { days } }),
+  getForecast: (days = 7, city) =>
+    axios.get('/environment/forecast/', { params: { days, ...(city ? { city } : {}) } }),
 
   /**
-   * Get alerts/warnings
-   * @returns {Promise} API response with environmental alerts
+   * Get livestock weather alerts
+   * @param {string} city - Optional city name
    */
-  getAlerts: () => axios.get('/environment/alerts/'),
+  getAlerts: (city) =>
+    axios.get('/environment/alerts/', { params: city ? { city } : {} }),
+
+  /**
+   * Get environmental history
+   */
+  getHistory: (params) =>
+    axios.get('/environment/history/', { params }),
 
   /**
    * Record environmental data
-   * @param {Object} data - Environmental data
-   * @returns {Promise} API response
    */
-  recordData: (data) => axios.post('/environment/record/', data),
+  recordData: (data) =>
+    axios.post('/environment/record/', data),
 
   /**
-   * Get optimal conditions for species
-   * @param {string} species - Animal species
-   * @returns {Promise} API response with optimal conditions
+   * Get optimal conditions for a species
    */
-  getOptimalConditions: (species) => 
+  getOptimalConditions: (species) =>
     axios.get('/environment/optimal/', { params: { species } }),
 };

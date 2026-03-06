@@ -1,234 +1,341 @@
-"""
-Environment/Weather API Views
-"""
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from django.conf import settings
-import requests
 import os
+import requests
 from datetime import datetime
 
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
 
-WEATHER_API_KEY =  os.environ.get('OPENWEATHERMAP')
-FARM_LAT = os.environ.get('FARM_LATITUDE', '34.0522')
-FARM_LON = os.environ.get('FARM_LONGITUDE', '-118.2437')
 
+WEATHER_API_KEY = settings.API_KEYS.get('OPENWEATHERMAP')
+FARM_LAT = float(os.environ.get('FARM_LATITUDE', '31.4273'))
+FARM_LON = float(os.environ.get('FARM_LONGITUDE', '73.1166'))
+
+
+# ─── Helpers ─────────────────────────────────────────────────────────────────
 
 def get_coordinates(city_name):
-    """Converts a city name to latitude and longitude using OpenWeatherMap's Geo API."""
-    if not city_name:
-        return None, None
-
-    try:
-        url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={WEATHER_API_KEY}"
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        if data:
-            return data[0]['lat'], data[0]['lon']
-    except Exception as e:
-        print(f"Geocoding Error: {e}")
-    
-    return None, None
-
-
-def get_current_weather(location=None):
-    """Fetches real-time environmental data from OpenWeatherMap."""
-    if not WEATHER_API_KEY:
-        return {'success': False, 'error': 'API Key not configured.'}
-    
-    lat, lon = float(FARM_LAT), float(FARM_LON)
-    
-    if location:
-        geo_lat, geo_lon = get_coordinates(location)
-        if geo_lat and geo_lon:
-            lat, lon = geo_lat, geo_lon
-        else:
-            return {'success': False, 'error': f"Could not find coordinates for '{location}'."}
-
+    """Convert city name → (lat, lon) using OpenWeatherMap Geo API."""
     try:
         url = (
-            f"http://api.openweathermap.org/data/2.5/weather?"
-            f"lat={lat}&lon={lon}&units=metric&appid={WEATHER_API_KEY}"
+            f"http://api.openweathermap.org/geo/1.0/direct"
+            f"?q={city_name}&limit=1&appid={WEATHER_API_KEY}"
         )
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        
-        rain_volume = data.get('rain', {}).get('1h', 0)
-        
-        return {
-            'success': True,
-            'city': data.get('name', location or 'Farm Location'),
-            'latitude': lat,
-            'longitude': lon,
-            'outdoor_temp_c': data['main']['temp'],
-            'humidity': data['main']['humidity'],
-            'description': data['weather'][0]['description'].capitalize(),
-            'rain_chance': 'High' if rain_volume > 0.5 else 'Low',
-            'aqi': 100,
-            'wind_speed': data['wind']['speed']
-        }
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        if data:
+            return data[0]['lat'], data[0]['lon'], data[0].get('country', '')
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        print(f"Geocoding error: {e}")
+    return None, None, None
 
 
-def determine_season(latitude, current_month):
-    """Determines the meteorological season based on latitude and month."""
-    if latitude >= 0:
-        if current_month in [12, 1, 2]:
-            return "Winter"
-        elif current_month in [3, 4, 5]:
-            return "Spring"
-        elif current_month in [6, 7, 8]:
-            return "Summer"
-        else:
-            return "Autumn"
-    else:
-        if current_month in [12, 1, 2]:
-            return "Summer"
-        elif current_month in [3, 4, 5]:
-            return "Autumn"
-        elif current_month in [6, 7, 8]:
-            return "Winter"
-        else:
-            return "Spring"
-
-
-def assess_risk(outdoor_temp, barn_temp, humidity):
-    """Assess environmental risks and provide recommendations."""
-    recommendations = []
-    
-    if outdoor_temp > 38 or barn_temp > 35:
-        status = "Warning (Heat Stress Risk)"
-        status_color = "#dc3545"
-        risk_level = "high"
-        recommendations.extend([
-            "Increase ventilation in barn",
-            "Ensure adequate water supply",
-            "Provide shade for outdoor animals",
-            "Monitor animals for signs of heat stress"
-        ])
-    elif outdoor_temp < 5:
-        status = "Alert (Cold Stress Risk)"
-        status_color = "#40c4ff"
-        risk_level = "medium"
-        recommendations.extend([
-            "Ensure proper insulation in barn",
-            "Check heating systems",
-            "Increase feed rations",
-            "Monitor for frostbite"
-        ])
-    elif humidity > 80:
-        status = "Alert (High Humidity/Respiratory Risk)"
-        status_color = "#ffc107"
-        risk_level = "medium"
-        recommendations.extend([
-            "Improve barn ventilation",
-            "Monitor for respiratory issues",
-            "Check bedding moisture levels",
-            "Ensure proper drainage"
-        ])
-    else:
-        status = "Optimal"
-        status_color = "#28a745"
-        risk_level = "low"
-        recommendations.append("Environmental conditions are optimal")
-    
-    return status, status_color, risk_level, recommendations
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_weather_data(request):
-    """
-    Get current weather data for a location
-    GET /api/v1/environment/weather/?location=New York
-    """
-    location = request.query_params.get('location')
-    weather_data = get_current_weather(location)
-    
-    if weather_data['success']:
-        # Add season information
-        current_month = datetime.now().month
-        city_latitude = weather_data['latitude']
-        weather_data['season'] = determine_season(city_latitude, current_month)
-    
-    return Response(weather_data)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_environment_status(request):
-    """
-    Get complete environment status with risk assessment
-    GET /api/v1/environment/status/?location=New York
-    """
-    location = request.query_params.get('location')
-    weather_data = get_current_weather(location)
-    barn_temp = 25  # Placeholder - could be from sensors
-    
-    if not weather_data['success']:
-        return Response({
-            'success': False,
-            'error': weather_data.get('error', 'Failed to fetch weather data')
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    current_month = datetime.now().month
-    city_latitude = weather_data['latitude']
-    season = determine_season(city_latitude, current_month)
-    outdoor_temp = weather_data['outdoor_temp_c']
-    humidity = weather_data['humidity']
-    
-    # Risk assessment
-    current_status, status_color, risk_level, recommendations = assess_risk(
-        outdoor_temp, barn_temp, humidity
+def fetch_current_weather(lat, lon):
+    """Call OWM current weather endpoint and return raw dict."""
+    url = (
+        f"http://api.openweathermap.org/data/2.5/weather"
+        f"?lat={lat}&lon={lon}&units=metric&appid={WEATHER_API_KEY}"
     )
-    
-    response_data = {
-        'season': season,
-        'outdoor_temp_c': round(outdoor_temp, 1),
-        'barn_temp_c': barn_temp,
-        'humidity': humidity,
-        'aqi': weather_data['aqi'],
-        'rain_chance': weather_data['rain_chance'],
-        'wind_speed': round(weather_data['wind_speed'], 1),
-        'description': weather_data['description'],
-        'current_status': current_status,
-        'status_color': status_color,
-        'risk_level': risk_level,
-        'location': weather_data['city'],
-        'recommendations': recommendations
-    }
-    
-    return Response(response_data)
+    resp = requests.get(url, timeout=5)
+    resp.raise_for_status()
+    return resp.json()
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_coordinates_for_location(request):
-    """
-    Get coordinates for a city name
-    GET /api/v1/environment/coordinates/?city=London
-    """
-    city = request.query_params.get('city')
-    
-    if not city:
-        return Response({
-            'error': 'City parameter is required'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    lat, lon = get_coordinates(city)
-    
-    if lat and lon:
-        return Response({
-            'city': city,
-            'latitude': lat,
-            'longitude': lon
+def fetch_forecast(lat, lon):
+    """Call OWM 5-day/3-hour forecast endpoint."""
+    url = (
+        f"http://api.openweathermap.org/data/2.5/forecast"
+        f"?lat={lat}&lon={lon}&units=metric&cnt=56&appid={WEATHER_API_KEY}"
+    )
+    resp = requests.get(url, timeout=5)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def determine_season(latitude, month):
+    if latitude >= 0:  # Northern hemisphere
+        if month in [12, 1, 2]:  return 'Winter'
+        if month in [3, 4, 5]:   return 'Spring'
+        if month in [6, 7, 8]:   return 'Summer'
+        return 'Autumn'
+    else:              # Southern hemisphere
+        if month in [12, 1, 2]:  return 'Summer'
+        if month in [3, 4, 5]:   return 'Autumn'
+        if month in [6, 7, 8]:   return 'Winter'
+        return 'Spring'
+
+
+def assess_status(temp, humidity, wind_speed):
+    if temp > 38:          return 'warning',  'Heat Stress Risk'
+    if temp < 5:           return 'alert',    'Cold Stress Risk'
+    if humidity > 80:      return 'alert',    'High Humidity / Respiratory Risk'
+    if wind_speed > 15:    return 'warning',  'Strong Winds'
+    return 'optimal', 'Optimal'
+
+
+def build_alerts(temp, humidity, wind_speed):
+    alerts = []
+    if temp > 38:
+        alerts.append({
+            'title': 'Heat Stress Risk',
+            'message': 'Ensure adequate water and shade. Consider indoor housing during peak hours.',
+            'severity': 'critical',
         })
-    else:
+    if temp < 5:
+        alerts.append({
+            'title': 'Cold Stress Risk',
+            'message': 'Provide extra bedding and shelter. Monitor animals for hypothermia.',
+            'severity': 'warning',
+        })
+    if humidity > 80:
+        alerts.append({
+            'title': 'High Humidity Alert',
+            'message': 'Monitor for respiratory issues. Ensure proper ventilation in shelters.',
+            'severity': 'warning',
+        })
+    if wind_speed > 15:
+        alerts.append({
+            'title': 'Strong Winds',
+            'message': 'Secure loose structures and move animals to sheltered areas.',
+            'severity': 'info',
+        })
+    return alerts
+
+
+# ─── Views ────────────────────────────────────────────────────────────────────
+
+class EnvironmentStatusView(APIView):
+    """
+    GET /api/v1/environment/status/?city=<name>
+
+    Returns current weather conditions for the farm (default) or a searched city.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not WEATHER_API_KEY:
+            return Response(
+                {'error': 'Weather API key not configured.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        city = request.query_params.get('city', '').strip()
+        lat, lon, country = FARM_LAT, FARM_LON, ''
+        city_name = 'Farm Location'
+
+        if city:
+            g_lat, g_lon, g_country = get_coordinates(city)
+            if g_lat is None:
+                return Response(
+                    {'error': f"Could not find city: '{city}'"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            lat, lon, country = g_lat, g_lon, g_country or ''
+
+        try:
+            data = fetch_current_weather(lat, lon)
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Weather service unavailable: {e}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        temp        = data['main']['temp']
+        humidity    = data['main']['humidity']
+        wind_speed  = data['wind']['speed']
+        rain_1h     = data.get('rain', {}).get('1h', 0)
+        month       = datetime.now().month
+        season      = determine_season(lat, month)
+        s_key, s_label = assess_status(temp, humidity, wind_speed)
+
+        # Sunrise / sunset (epoch → HH:MM)
+        def epoch_to_time(ts):
+            return datetime.utcfromtimestamp(ts).strftime('%H:%M') if ts else '--'
+
+        sys_data = data.get('sys', {})
+
         return Response({
-            'error': f'Could not find coordinates for {city}'
-        }, status=status.HTTP_404_NOT_FOUND)
+            'city':                data.get('name', city or 'Farm Location'),
+            'country':             country or sys_data.get('country', ''),
+            'latitude':            lat,
+            'longitude':           lon,
+            'is_farm_location':    not bool(city),
+            'season':              season,
+            'temperature':         round(temp, 1),
+            'feels_like':          round(data['main'].get('feels_like', temp), 1),
+            'temp_min':            round(data['main'].get('temp_min', temp), 1),
+            'temp_max':            round(data['main'].get('temp_max', temp), 1),
+            'humidity':            humidity,
+            'pressure':            data['main'].get('pressure'),
+            'wind_speed':          round(wind_speed, 1),
+            'wind_direction':      data['wind'].get('deg'),
+            'visibility':          round(data.get('visibility', 0) / 1000, 1),  # m → km
+            'weather_description': data['weather'][0]['description'].capitalize(),
+            'weather_icon':        data['weather'][0].get('icon'),
+            'rain_1h':             rain_1h,
+            'rain_chance':         'High' if rain_1h > 0.5 else 'Low',
+            'sunrise':             epoch_to_time(sys_data.get('sunrise')),
+            'sunset':              epoch_to_time(sys_data.get('sunset')),
+            'status':              s_key,
+            'status_label':        s_label,
+            'timestamp':           datetime.utcnow().isoformat(),
+        })
+
+
+class EnvironmentStatisticsView(APIView):
+    """
+    GET /api/v1/environment/statistics/?city=<name>
+
+    Returns today's min/max/avg derived from OWM current weather.
+    (Full historical stats would need a stored EnvironmentReading model.)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not WEATHER_API_KEY:
+            return Response({'error': 'API key not configured.'}, status=503)
+
+        city = request.query_params.get('city', '').strip()
+        lat, lon = FARM_LAT, FARM_LON
+
+        if city:
+            g_lat, g_lon, _ = get_coordinates(city)
+            if g_lat:
+                lat, lon = g_lat, g_lon
+
+        try:
+            data = fetch_current_weather(lat, lon)
+        except requests.RequestException:
+            return Response({'error': 'Weather service unavailable.'}, status=503)
+
+        main = data['main']
+        return Response({
+            'temp_max':     round(main.get('temp_max', main['temp']), 1),
+            'temp_min':     round(main.get('temp_min', main['temp']), 1),
+            'temp_avg':     round(main['temp'], 1),
+            'humidity_avg': main['humidity'],
+            'pressure':     main.get('pressure'),
+            'rainfall':     round(data.get('rain', {}).get('1h', 0), 2),
+            'wind_avg':     round(data['wind']['speed'], 1),
+        })
+
+
+class EnvironmentForecastView(APIView):
+    """
+    GET /api/v1/environment/forecast/?days=7&city=<name>
+
+    Returns a daily forecast (up to 5 days) from OWM free-tier 3-hour forecast.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not WEATHER_API_KEY:
+            return Response({'error': 'API key not configured.'}, status=503)
+
+        city = request.query_params.get('city', '').strip()
+        lat, lon = FARM_LAT, FARM_LON
+
+        if city:
+            g_lat, g_lon, _ = get_coordinates(city)
+            if g_lat:
+                lat, lon = g_lat, g_lon
+
+        try:
+            raw = fetch_forecast(lat, lon)
+        except requests.RequestException:
+            return Response({'error': 'Forecast service unavailable.'}, status=503)
+
+        # Collapse 3-hour slots into daily summaries
+        daily = {}
+        for item in raw.get('list', []):
+            date_str = item['dt_txt'][:10]  # 'YYYY-MM-DD'
+            temp     = item['main']['temp']
+            precip   = item.get('pop', 0) * 100  # probability of precipitation %
+            desc     = item['weather'][0]['description'].capitalize()
+            icon     = item['weather'][0].get('icon', '')
+
+            if date_str not in daily:
+                daily[date_str] = {
+                    'date':       date_str,
+                    'temps':      [],
+                    'precips':    [],
+                    'weather':    desc,
+                    'icon':       icon,
+                }
+            daily[date_str]['temps'].append(temp)
+            daily[date_str]['precips'].append(precip)
+
+        forecast = []
+        for date_str, d in sorted(daily.items()):
+            forecast.append({
+                'date':          date_str,
+                'temp_max':      round(max(d['temps']), 1),
+                'temp_min':      round(min(d['temps']), 1),
+                'temp_avg':      round(sum(d['temps']) / len(d['temps']), 1),
+                'precipitation': round(max(d['precips']), 0),
+                'weather':       d['weather'],
+                'icon':          d['icon'],
+            })
+
+        return Response(forecast[:7])
+
+
+class EnvironmentAlertsView(APIView):
+    """
+    GET /api/v1/environment/alerts/?city=<name>
+
+    Returns livestock-relevant weather alerts based on current conditions.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not WEATHER_API_KEY:
+            return Response({'error': 'API key not configured.'}, status=503)
+
+        city = request.query_params.get('city', '').strip()
+        lat, lon = FARM_LAT, FARM_LON
+
+        if city:
+            g_lat, g_lon, _ = get_coordinates(city)
+            if g_lat:
+                lat, lon = g_lat, g_lon
+
+        try:
+            data = fetch_current_weather(lat, lon)
+        except requests.RequestException:
+            return Response({'error': 'Weather service unavailable.'}, status=503)
+
+        temp       = data['main']['temp']
+        humidity   = data['main']['humidity']
+        wind_speed = data['wind']['speed']
+        alerts     = build_alerts(temp, humidity, wind_speed)
+
+        return Response(alerts)
+    
+    
+# ─── URL routing aliases ──────────────────────────────────────────────────────
+
+class CoordinatesView(APIView):
+    """
+    GET /api/v1/environment/coordinates/?city=<name>
+    Returns lat/lon for a given city name.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        city = request.query_params.get('city', '').strip()
+        if not city:
+            return Response({'error': 'city parameter is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        lat, lon, country = get_coordinates(city)
+        if lat is None:
+            return Response({'error': f"Could not find city: '{city}'"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'city': city, 'latitude': lat, 'longitude': lon, 'country': country})
+
+
+# Aliases expected by urls.py
+get_weather_data             = EnvironmentStatusView.as_view()
+get_environment_status       = EnvironmentStatusView.as_view()
+get_coordinates_for_location = CoordinatesView.as_view()

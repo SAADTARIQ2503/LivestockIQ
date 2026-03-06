@@ -1,14 +1,16 @@
 import { Bell, Menu, Moon, Sun, User, LogOut, Settings } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useState, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { animalsAPI } from '@/api/animals';
+import { healthAPI } from '@/api/health';
 
 /**
  * Navbar Component
- * Top navigation bar with user menu and notifications
+ * Dynamic notifications from real API data. No hardcoded counts.
  */
 export default function Navbar() {
   const { user } = useAuthStore();
@@ -19,56 +21,103 @@ export default function Navbar() {
   const userMenuRef = useRef(null);
   const notificationsRef = useRef(null);
 
-  // Close dropdowns when clicking outside
+  // Fetch live data for notifications
+  const { data: animalsData } = useQuery({
+    queryKey: ['animals'],
+    queryFn: () => animalsAPI.getAll({}),
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: overdueData } = useQuery({
+    queryKey: ['health', 'overdue'],
+    queryFn: healthAPI.getOverdue,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: upcomingData } = useQuery({
+    queryKey: ['health', 'upcoming'],
+    queryFn: healthAPI.getUpcoming,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Build notification list from real data
+  const allAnimals = animalsData?.data?.results ?? animalsData?.data ?? [];
+  const unhealthyAnimals = Array.isArray(allAnimals)
+    ? allAnimals.filter(a => !a.is_healthy)
+    : [];
+
+  const overdueList = overdueData?.data?.results ?? overdueData?.data ?? [];
+  const upcomingList = upcomingData?.data?.results ?? upcomingData?.data ?? [];
+
+  const notifications = [
+    ...Array.isArray(overdueList) ? overdueList.slice(0, 3).map(v => ({
+      id: `overdue-${v.id}`,
+      title: 'Overdue Vaccination',
+      message: `${v.vaccine_name} for ${v.is_group ? 'Group' : `Animal #${v.animal}`} is overdue`,
+      time: 'Overdue',
+      dot: 'bg-red-500',
+    })) : [],
+    ...Array.isArray(upcomingList) ? upcomingList.slice(0, 2).map(v => ({
+      id: `upcoming-${v.id}`,
+      title: 'Upcoming Vaccination',
+      message: `${v.vaccine_name} scheduled for ${v.schedule_date}`,
+      time: 'Upcoming',
+      dot: 'bg-yellow-500',
+    })) : [],
+    ...unhealthyAnimals.slice(0, 2).map(a => ({
+      id: `animal-${a.id}`,
+      title: 'Animal Needs Attention',
+      message: `${a.animal_type} #${a.id} requires: ${a.required_vaccine || 'check-up'}`,
+      time: 'Action needed',
+      dot: 'bg-blue-500',
+    })),
+  ];
+
+  const notificationCount = notifications.length;
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setShowUserMenu(false);
       }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
         setShowNotifications(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
-    <nav className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40 h-16">
+    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 fixed top-0 left-0 right-0 z-40 h-16">
       <div className="flex items-center justify-between h-full px-4">
-        {/* Left Section */}
+
+        {/* Left */}
         <div className="flex items-center gap-4">
-          {/* Mobile Menu Button */}
           <button
             onClick={toggleMobileMenu}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200"
             aria-label="Toggle mobile menu"
           >
             <Menu size={24} />
           </button>
-
-          {/* Desktop Sidebar Toggle */}
           <button
             onClick={toggleSidebar}
-            className="hidden lg:block p-2 rounded-lg hover:bg-gray-100"
+            className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200"
             aria-label="Toggle sidebar"
           >
             <Menu size={24} />
           </button>
-
-          {/* Logo & Title */}
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-primary">LivestockIQ</h1>
-          </div>
+          <h1 className="text-xl font-bold text-primary">LivestockIQ</h1>
         </div>
 
-        {/* Right Section */}
+        {/* Right */}
         <div className="flex items-center gap-2">
+
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200"
             aria-label="Toggle theme"
           >
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
@@ -78,46 +127,61 @@ export default function Navbar() {
           <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 rounded-lg hover:bg-gray-100 relative"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative text-gray-700 dark:text-gray-200"
               aria-label="Notifications"
             >
               <Bell size={20} />
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              >
-                3
-              </Badge>
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full">
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </span>
+              )}
             </button>
 
-            {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
-                <div className="px-4 py-2 border-b border-gray-200">
-                  <h3 className="font-semibold">Notifications</h3>
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                  {notificationCount > 0 && (
+                    <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 px-2 py-0.5 rounded-full font-medium">
+                      {notificationCount} new
+                    </span>
+                  )}
                 </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {/* Sample notifications */}
-                  <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
-                    <p className="text-sm font-medium">Vaccination Due</p>
-                    <p className="text-xs text-gray-600">Animal #1234 needs vaccination</p>
-                    <p className="text-xs text-gray-400 mt-1">2 hours ago</p>
-                  </div>
-                  <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
-                    <p className="text-sm font-medium">New Animal Added</p>
-                    <p className="text-xs text-gray-600">Cow #5678 added successfully</p>
-                    <p className="text-xs text-gray-400 mt-1">5 hours ago</p>
-                  </div>
-                  <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
-                    <p className="text-sm font-medium">Weather Alert</p>
-                    <p className="text-xs text-gray-600">High temperature warning</p>
-                    <p className="text-xs text-gray-400 mt-1">1 day ago</p>
-                  </div>
+
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      <Bell size={28} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">All clear — no new notifications</p>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700/50 last:border-0"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.dot}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{n.title}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{n.message}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{n.time}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div className="px-4 py-2 border-t border-gray-200">
-                  <button className="text-sm text-primary hover:underline">
-                    View all notifications
-                  </button>
+
+                <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+                  <NavLink
+                    to="/alerts"
+                    onClick={() => setShowNotifications(false)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    View all alerts →
+                  </NavLink>
                 </div>
               </div>
             )}
@@ -127,68 +191,54 @@ export default function Navbar() {
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100"
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white">
-                {user?.first_name?.charAt(0) || 'U'}
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                {user?.first_name?.charAt(0) || user?.username?.charAt(0) || 'U'}
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
                   {user?.first_name} {user?.last_name}
                 </p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
               </div>
             </button>
 
-            {/* User Dropdown */}
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
-                <div className="px-4 py-2 border-b border-gray-200">
-                  <p className="text-sm font-medium">
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {user?.first_name} {user?.last_name}
                   </p>
-                  <p className="text-xs text-gray-500">{user?.email}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
                 </div>
 
                 <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    // Navigate to profile
-                    window.location.href = '/profile';
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                  onClick={() => { setShowUserMenu(false); window.location.href = '/profile'; }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
                 >
-                  <User size={16} />
-                  Profile
+                  <User size={16} /> Profile
                 </button>
 
                 <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    // Navigate to settings
-                    window.location.href = '/settings';
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                  onClick={() => { setShowUserMenu(false); window.location.href = '/settings'; }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
                 >
-                  <Settings size={16} />
-                  Settings
+                  <Settings size={16} /> Settings
                 </button>
 
-                <div className="border-t border-gray-200 my-2"></div>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
 
                 <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    logout();
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                  onClick={() => { setShowUserMenu(false); logout(); }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
                 >
-                  <LogOut size={16} />
-                  Logout
+                  <LogOut size={16} /> Logout
                 </button>
               </div>
             )}
           </div>
+
         </div>
       </div>
     </nav>

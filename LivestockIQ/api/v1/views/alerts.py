@@ -119,7 +119,7 @@ class DetectDiseaseView(APIView):
         else:
             # Synchronous processing
             try:
-                model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'cow_disease_model_fold_5.pth')
+                model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'model_vit.pth')
                 
                 if not os.path.exists(model_path):
                     return Response(

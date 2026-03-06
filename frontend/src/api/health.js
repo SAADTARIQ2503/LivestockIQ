@@ -80,4 +80,5 @@ export const healthAPI = {
    */
   getVaccinesBySpecies: (species) => 
     axios.get('/health/vaccines/by-species/', { params: { species } }),
+  getVaccineRecommendations: (params) => axios.get('/health/vaccines/recommend/', { params }),
 };

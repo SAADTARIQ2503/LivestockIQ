@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Bell, CheckCircle, Filter, Trash2, Eye, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/utils/formatters';
-
+import { useNavigate } from 'react-router-dom';
+import { Scan } from 'lucide-react';
 const SEVERITY_CONFIG = {
   critical: {
     label: 'Critical',
@@ -43,6 +44,7 @@ const SEVERITY_FILTERS = [
 
 export default function AlertsList() {
   const queryClient = useQueryClient();
+const navigate = useNavigate();  
   const [statusFilter, setStatusFilter] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
   const [expandedAlert, setExpandedAlert] = useState(null);
@@ -105,12 +107,18 @@ export default function AlertsList() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Alerts</h1>
-          <p className="text-gray-600 mt-1">Monitor disease detections and system notifications</p>
+          <p className="text-gray-600 mt-1">Monitor and manage system alerts</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()} className="flex items-center gap-2">
-          <RefreshCw size={16} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => refetch()} className="flex items-center gap-2">
+            <RefreshCw size={16} />
+            Refresh
+          </Button>
+          <Button onClick={() => navigate('/ai-detection')} className="flex items-center gap-2">
+            <Scan size={18} />
+            Run AI Detection
+          </Button>
+        </div>
       </div>
 
       {/* Summary Stats */}
@@ -163,11 +171,10 @@ export default function AlertsList() {
                 <button
                   key={f.value}
                   onClick={() => setStatusFilter(f.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    statusFilter === f.value
-                      ? 'bg-primary text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${statusFilter === f.value
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -179,11 +186,10 @@ export default function AlertsList() {
                 <button
                   key={f.value}
                   onClick={() => setSeverityFilter(f.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    severityFilter === f.value
-                      ? 'bg-primary text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${severityFilter === f.value
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -207,9 +213,8 @@ export default function AlertsList() {
             return (
               <Card
                 key={alert.id}
-                className={`border-l-4 ${config.borderClass} transition-shadow hover:shadow-md ${
-                  alert.is_resolved ? 'opacity-60' : ''
-                }`}
+                className={`border-l-4 ${config.borderClass} transition-shadow hover:shadow-md ${alert.is_resolved ? 'opacity-60' : ''
+                  }`}
               >
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-4">
