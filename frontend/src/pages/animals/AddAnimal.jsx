@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAnimals } from '@/hooks/useAnimals';
+import { useFarms } from '@/hooks/useFarms';
 import { healthAPI } from '@/api/health';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Syringe } from 'lucide-react';
+import { ArrowLeft, Syringe, MapPin } from 'lucide-react';
 import { ANIMAL_TYPE_OPTIONS, SEX_OPTIONS } from '@/utils/constants';
 
 export default function AddAnimal() {
   const navigate = useNavigate();
   const { createAnimal, isCreating } = useAnimals();
+  const { farms, isLoadingFarms } = useFarms();
 
   const [formData, setFormData] = useState({
+    farm: '', // NEW: Farm selection
     animal_type: '',
     age: '',
     sex: '',
@@ -28,7 +31,7 @@ export default function AddAnimal() {
   const [isLoadingVaccines, setIsLoadingVaccines] = useState(false);
   const [vaccineSearch, setVaccineSearch] = useState('');
 
-  // Load vaccines whenever animal_type changes (and animal is unhealthy)
+  // Load vaccines whenever animal_type changes
   useEffect(() => {
     if (!formData.animal_type) {
       setVaccines([]);
@@ -83,6 +86,11 @@ export default function AddAnimal() {
   const validateForm = () => {
     const newErrors = {};
 
+    // NEW: Validate farm selection
+    if (!formData.farm) {
+      newErrors.farm = 'Please select a farm';
+    }
+
     if (!formData.animal_type) {
       newErrors.animal_type = 'Animal type is required';
     }
@@ -112,6 +120,7 @@ export default function AddAnimal() {
     if (!validateForm()) return;
 
     createAnimal({
+      farm: parseInt(formData.farm), // NEW: Include farm
       animal_type: formData.animal_type,
       age: String(parseInt(formData.age)),
       sex: formData.sex,
@@ -123,6 +132,8 @@ export default function AddAnimal() {
   const filteredVaccines = vaccines.filter(v =>
     v.toLowerCase().includes(vaccineSearch.toLowerCase())
   );
+
+  const farmsList = Array.isArray(farms) ? farms : (farms?.results || []);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -143,6 +154,61 @@ export default function AddAnimal() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Farm Selection - NEW */}
+            <div className="space-y-2">
+              <Label htmlFor="farm">
+                Farm <span className="text-red-500">*</span>
+              </Label>
+              {isLoadingFarms ? (
+                <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 border border-input rounded-md">
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  Loading farms...
+                </div>
+              ) : farmsList.length === 0 ? (
+                <div className="space-y-3">
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
+                    <p className="text-sm text-amber-900 font-medium mb-2">
+                      ⚠️ No farms found
+                    </p>
+                    <p className="text-sm text-amber-700">
+                      You need to create at least one farm before adding animals.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => navigate('/farms/add')}
+                    className="w-full"
+                  >
+                    <MapPin size={16} className="mr-2" />
+                    Create Your First Farm
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <select
+                    id="farm"
+                    name="farm"
+                    value={formData.farm}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${
+                      errors.farm ? 'border-red-500' : 'border-input'
+                    }`}
+                  >
+                    <option value="">Select a farm</option>
+                    {farmsList.map(farm => (
+                      <option key={farm.id} value={farm.id}>
+                        {farm.name} - {farm.address}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.farm && <p className="text-sm text-red-500">{errors.farm}</p>}
+                  <p className="text-sm text-gray-500">
+                    Select which farm this animal belongs to
+                  </p>
+                </>
+              )}
+            </div>
 
             {/* Animal Type */}
             <div className="space-y-2">
@@ -306,7 +372,11 @@ export default function AddAnimal() {
 
             {/* Actions */}
             <div className="flex gap-4">
-              <Button type="submit" disabled={isCreating} className="flex-1">
+              <Button 
+                type="submit" 
+                disabled={isCreating || farmsList.length === 0} 
+                className="flex-1"
+              >
                 {isCreating ? 'Adding...' : 'Add Animal'}
               </Button>
               <Button

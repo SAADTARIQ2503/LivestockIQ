@@ -3,12 +3,15 @@ import { useAnimal, useAnimals } from '@/hooks/useAnimals';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Edit, Trash2, Beef, Calendar, Syringe } from 'lucide-react';
+import { 
+  ArrowLeft, Edit, Trash2, Beef, Calendar, Syringe, 
+  MapPin, CheckCircle, Clock, AlertCircle 
+} from 'lucide-react';
 import { formatDate } from '@/utils/formatters';
 
 /**
  * Animal Detail Page
- * Shows detailed information about a single animal
+ * Shows detailed information about a single animal including vaccination history
  */
 export default function AnimalDetail() {
   const navigate = useNavigate();
@@ -27,6 +30,24 @@ export default function AnimalDetail() {
         }
       });
     }
+  };
+
+  /**
+   * Get vaccination status badge
+   */
+  const getVaccinationBadge = (vaccination) => {
+    if (vaccination.is_completed) {
+      return <Badge variant="success" className="text-xs">Completed</Badge>;
+    }
+    
+    const scheduleDate = new Date(vaccination.schedule_date);
+    const today = new Date();
+    
+    if (scheduleDate < today) {
+      return <Badge variant="destructive" className="text-xs">Overdue</Badge>;
+    }
+    
+    return <Badge variant="warning" className="text-xs">Scheduled</Badge>;
   };
 
   if (isLoading) {
@@ -53,6 +74,9 @@ export default function AnimalDetail() {
       </div>
     );
   }
+
+  const vaccinationHistory = animal.vaccination_history || [];
+  const vaccinationStatus = animal.vaccination_status || { total: 0, completed: 0, pending: 0 };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -102,6 +126,13 @@ export default function AnimalDetail() {
               <div>
                 <CardTitle className="text-2xl">{animal.animal_type}</CardTitle>
                 <p className="text-gray-600 mt-1">Animal ID: {animal.id}</p>
+                {/* NEW: Farm name display */}
+                {animal.farm_name && (
+                  <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                    <MapPin size={14} />
+                    {animal.farm_name}
+                  </p>
+                )}
               </div>
             </div>
             <Badge variant={animal.is_healthy ? 'success' : 'destructive'} className="text-base px-4 py-1">
@@ -137,44 +168,86 @@ export default function AnimalDetail() {
                     {animal.is_healthy ? 'Healthy' : 'Need Attention'}
                   </Badge>
                 </div>
+
+                {/* NEW: Required Vaccine */}
+                {animal.required_vaccine && (
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-gray-600">Required Vaccine:</span>
+                    <span className="font-semibold text-sm">{animal.required_vaccine}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Health & Vaccination */}
+            {/* Vaccination Summary */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Health & Vaccination</h3>
+              <h3 className="font-semibold text-lg border-b pb-2">Vaccination Summary</h3>
               
               <div className="space-y-3">
-                {animal.vaccine_name ? (
+                {/* Vaccination Stats */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="p-3 bg-blue-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-blue-600">{vaccinationStatus.total}</p>
+                    <p className="text-xs text-gray-600">Total</p>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-green-600">{vaccinationStatus.completed}</p>
+                    <p className="text-xs text-gray-600">Completed</p>
+                  </div>
+                  <div className="p-3 bg-orange-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-orange-600">{vaccinationStatus.pending}</p>
+                    <p className="text-xs text-gray-600">Pending</p>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                {vaccinationStatus.fully_vaccinated ? (
                   <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-start gap-3">
-                      <Syringe className="text-green-600 mt-1" size={20} />
+                      <CheckCircle className="text-green-600 mt-1" size={20} />
                       <div>
-                        <p className="font-medium text-green-900">Vaccinated</p>
+                        <p className="font-medium text-green-900">Fully Vaccinated</p>
                         <p className="text-sm text-green-700 mt-1">
-                          Vaccine: {animal.vaccine_name}
+                          All scheduled vaccinations completed
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : vaccinationStatus.overdue > 0 ? (
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="text-red-600 mt-1" size={20} />
+                      <div>
+                        <p className="font-medium text-red-900">Overdue Vaccinations</p>
+                        <p className="text-sm text-red-700 mt-1">
+                          {vaccinationStatus.overdue} vaccination{vaccinationStatus.overdue > 1 ? 's' : ''} overdue
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : vaccinationStatus.pending > 0 ? (
+                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="flex items-start gap-3">
+                      <Clock className="text-yellow-600 mt-1" size={20} />
+                      <div>
+                        <p className="font-medium text-yellow-900">Pending Vaccinations</p>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          {vaccinationStatus.pending} vaccination{vaccinationStatus.pending > 1 ? 's' : ''} scheduled
                         </p>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-start gap-3">
-                      <Syringe className="text-yellow-600 mt-1" size={20} />
+                      <Syringe className="text-gray-600 mt-1" size={20} />
                       <div>
-                        <p className="font-medium text-yellow-900">No Vaccination Record</p>
-                        <p className="text-sm text-yellow-700 mt-1">
-                          No vaccine has been administered yet
+                        <p className="font-medium text-gray-900">No Vaccinations</p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          No vaccination records found
                         </p>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {animal.created_at && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 pt-4">
-                    <Calendar size={16} />
-                    <span>Added on {formatDate(animal.created_at)}</span>
                   </div>
                 )}
               </div>
@@ -182,6 +255,59 @@ export default function AnimalDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* NEW: Vaccination History */}
+      {vaccinationHistory.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Syringe size={20} />
+              Vaccination History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {vaccinationHistory.map((vaccination) => (
+                <div
+                  key={vaccination.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      vaccination.is_completed 
+                        ? 'bg-green-100' 
+                        : new Date(vaccination.schedule_date) < new Date()
+                          ? 'bg-red-100'
+                          : 'bg-yellow-100'
+                    }`}>
+                      <Syringe 
+                        size={20} 
+                        className={
+                          vaccination.is_completed 
+                            ? 'text-green-600' 
+                            : new Date(vaccination.schedule_date) < new Date()
+                              ? 'text-red-600'
+                              : 'text-yellow-600'
+                        } 
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">{vaccination.vaccine_name}</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {formatDate(vaccination.schedule_date)}
+                      </p>
+                      {vaccination.dose_notes && (
+                        <p className="text-xs text-gray-500 mt-1">{vaccination.dose_notes}</p>
+                      )}
+                    </div>
+                  </div>
+                  {getVaccinationBadge(vaccination)}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Statistics Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -210,9 +336,15 @@ export default function AnimalDetail() {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-2">Vaccination Status</p>
-              <p className={`text-2xl font-bold ${animal.vaccine_name ? 'text-green-600' : 'text-yellow-600'}`}>
-                {animal.vaccine_name ? 'Complete' : 'Pending'}
+              <p className="text-sm text-gray-600 mb-2">Vaccination Progress</p>
+              <p className={`text-2xl font-bold ${
+                vaccinationStatus.fully_vaccinated ? 'text-green-600' : 
+                vaccinationStatus.pending > 0 ? 'text-yellow-600' : 'text-gray-600'
+              }`}>
+                {vaccinationStatus.total > 0 
+                  ? `${Math.round((vaccinationStatus.completed / vaccinationStatus.total) * 100)}%`
+                  : 'N/A'
+                }
               </p>
             </div>
           </CardContent>
@@ -230,31 +362,30 @@ export default function AnimalDetail() {
               <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                 <p className="font-medium text-red-900">⚠️ Attention Required</p>
                 <p className="text-sm text-red-700 mt-1">
-                  This animal requires veterinary attention. Please schedule a check-up as soon as possible.
+                  This animal requires veterinary attention. Required vaccine: {animal.required_vaccine}
                 </p>
               </div>
             )}
 
-            {!animal.vaccine_name && (
-              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="font-medium text-yellow-900">💉 Vaccination Needed</p>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Consider scheduling vaccination for this {animal.animal_type.toLowerCase()}. 
-                  Check recommended vaccines for {animal.animal_type.toLowerCase()}s.
+            {vaccinationStatus.overdue > 0 && (
+              <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                <p className="font-medium text-orange-900">📅 Overdue Vaccinations</p>
+                <p className="text-sm text-orange-700 mt-1">
+                  {vaccinationStatus.overdue} vaccination{vaccinationStatus.overdue > 1 ? 's are' : ' is'} overdue. 
+                  Please schedule veterinary visit immediately.
                 </p>
               </div>
             )}
 
-            {animal.is_healthy && animal.vaccine_name && (
+            {animal.is_healthy && vaccinationStatus.fully_vaccinated && (
               <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                 <p className="font-medium text-green-900">✅ All Good!</p>
                 <p className="text-sm text-green-700 mt-1">
-                  This animal is healthy and vaccinated. Continue with regular care and monitoring.
+                  This animal is healthy and fully vaccinated. Continue with regular care and monitoring.
                 </p>
               </div>
             )}
 
-            {/* Age-based recommendations */}
             {animal.age < 6 && (
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="font-medium text-blue-900">🍼 Young Animal Care</p>

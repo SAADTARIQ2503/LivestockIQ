@@ -1,90 +1,80 @@
 """
 API V1 URL Configuration
+Place at: LivestockIQ/api/v1/urls.py
 """
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-# from .views import animals, health, auth, environment, alerts, costs
-from .views import animals
-from .views import health
-from .views import auth
-from .views import environment
-from .views import alerts
-from .views import costs
+from .views import animals, health, auth, environment, alerts, costs, farms
 from rest_framework_simplejwt.views import TokenRefreshView
-# from api.v1.views import alerts
 
-# Create router for viewsets
 router = DefaultRouter()
 router.register(r'animals', animals.AnimalViewSet, basename='animal')
 router.register(r'health/schedules', health.VaccinationScheduleViewSet, basename='vaccination-schedule')
+router.register(r'health/vaccines', health.VaccineDatasetViewSet, basename='vaccine')
 
 app_name = 'v1'
 
-
 urlpatterns = [
-    # Authentication endpoints
-    path('auth/register/', auth.RegisterView.as_view(), name='register'),
-    path('auth/login/', auth.CustomTokenObtainPairView.as_view(), name='login'),
-    path('auth/logout/', auth.logout_view, name='logout'),
-    path('auth/user/', auth.user_profile_view, name='user-profile'),
-    path('auth/user/update/', auth.update_profile_view, name='update-profile'),
-    path('auth/change-password/', auth.change_password_view, name='change-password'),
-    path('auth/dashboard/', auth.dashboard_stats_view, name='dashboard-stats'),
-    
-    # JWT token endpoints
-    
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
-    
-    # Health/Vaccination endpoints
-    # path('health/vaccines/', health.VaccineListView.as_view(), name='vaccine-list'),
-    # path('health/vaccines/recommended/', health.RecommendedVaccinesView.as_view(), name='recommended-vaccines'),
-    # path('health/vaccines/<slug:slug>/', health.VaccineDetailView.as_view(), name='vaccine-detail'),
-    # path('health/vaccines/by-species/', health.VaccinesBySpeciesView.as_view(), name='vaccines-by-species'),
-    # path('vaccines/recommend/', health.VaccineRecommendationView.as_view()),
-    # path('health/vaccines/recommend/', health.VaccineRecommendationView.as_view()),
-    path('health/vaccines/recommended/', health.RecommendedVaccinesView.as_view()),
-    path('health/vaccines/recommend/', health.VaccineRecommendationView.as_view()),  # LSH
-    path('health/vaccines/by-species/', health.VaccinesBySpeciesView.as_view()),
-    path('health/vaccines/<int:id>/', health.VaccineDetailView.as_view()),  # int: prevents "recommend" matching
-    path('health/vaccines/', health.VaccineListView.as_view()),
-    
-    
-    # Router URLs (includes animals and schedules)
+    # ── Auth ──────────────────────────────────────────────────────────────────
+    path('auth/register/',        auth.RegisterView.as_view(),           name='register'),
+    path('auth/login/',           auth.CustomTokenObtainPairView.as_view(), name='login'),
+    path('auth/logout/',          auth.logout_view,                      name='logout'),
+    path('auth/user/',            auth.user_profile_view,                name='user-profile'),
+    path('auth/user/update/',     auth.update_profile_view,              name='update-profile'),
+    path('auth/change-password/', auth.change_password_view,             name='change-password'),
+    path('auth/dashboard/',       auth.dashboard_stats_view,             name='dashboard-stats'),
+    path('auth/refresh/',         TokenRefreshView.as_view(),            name='token-refresh'),
+
+    # ── Farms ─────────────────────────────────────────────────────────────────
+    path('farms/',              farms.FarmListCreateView.as_view(), name='farm-list-create'),
+    path('farms/geocode/',      farms.FarmGeocodeView.as_view(),   name='farm-geocode'),
+    path('farms/<int:pk>/',     farms.FarmDetailView.as_view(),    name='farm-detail'),
+
+    # ── Router (animals, schedules, vaccines) ─────────────────────────────────
+    # This provides:
+    # - GET/POST /api/v1/animals/
+    # - GET/PUT/PATCH/DELETE /api/v1/animals/{id}/
+    # - GET /api/v1/animals/search/
+    # - GET /api/v1/animals/statistics/
+    # - GET /api/v1/animals/vaccines-by-species/
+    # 
+    # - GET/POST /api/v1/health/schedules/
+    # - GET/PUT/PATCH/DELETE /api/v1/health/schedules/{id}/
+    # - POST /api/v1/health/schedules/{id}/complete/
+    # - GET /api/v1/health/schedules/upcoming/
+    # - GET /api/v1/health/schedules/overdue/
+    # - GET /api/v1/health/schedules/by_animal/
+    # 
+    # - GET /api/v1/health/vaccines/
+    # - GET /api/v1/health/vaccines/{id}/
+    # - GET /api/v1/health/vaccines/by_species/
+    # - GET /api/v1/health/vaccines/recommended/
     path('', include(router.urls)),
 
+    # ── Environment ───────────────────────────────────────────────────────────
+    path('environment/weather/',       environment.get_weather_data,              name='weather-data'),
+    path('environment/status/',        environment.get_environment_status,        name='environment-status'),
+    path('environment/coordinates/',   environment.get_coordinates_for_location,  name='coordinates'),
+    path('environment/statistics/',    environment.EnvironmentStatisticsView.as_view(), name='environment-statistics'),
+    path('environment/forecast/',      environment.EnvironmentForecastView.as_view(),   name='environment-forecast'),
+    path('environment/alerts/',        environment.EnvironmentAlertsView.as_view(),     name='environment-alerts'),
+    path('environment/farms-weather/', farms.FarmsWeatherView.as_view(),          name='farms-weather'),
 
-    path('environment/weather/', environment.get_weather_data, name='weather-data'),
-    path('environment/status/', environment.get_environment_status, name='environment-status'),
-    path('environment/coordinates/', environment.get_coordinates_for_location, name='coordinates'),
-    path('environment/statistics/', environment.EnvironmentStatisticsView.as_view(), name='environment-statistics'),
-    path('environment/forecast/',   environment.EnvironmentForecastView.as_view(),   name='environment-forecast'),
-    path('environment/alerts/',     environment.EnvironmentAlertsView.as_view(),     name='environment-alerts'),
-    
-    # # Alerts endpoints
-    # path('alerts/', alerts.get_anomalies, name='anomalies-list'),
-    # path('alerts/<str:anomaly_id>/', alerts.get_anomaly_detail, name='anomaly-detail'),
-    # path('alerts/<str:anomaly_id>/acknowledge/', alerts.acknowledge_anomaly, name='anomaly-acknowledge'),
-    # path('alerts/statistics/', alerts.get_anomaly_statistics, name='anomaly-statistics'),
-    # path('alerts/unacknowledged/', alerts.get_unacknowledged_anomalies, name='unacknowledged-anomalies'),
-
-    # Alerts
-    path('alerts/', alerts.AlertListCreateView.as_view(), name='alert-list-create'),
-    path('alerts/<int:pk>/', alerts.AlertDetailView.as_view(), name='alert-detail'),
+    # ── Alerts ────────────────────────────────────────────────────────────────
+    path('alerts/',               alerts.AlertListCreateView.as_view(),  name='alert-list-create'),
+    path('alerts/<int:pk>/',      alerts.AlertDetailView.as_view(),      name='alert-detail'),
     path('alerts/<int:pk>/resolve/', alerts.ResolveAlertView.as_view(), name='resolve-alert'),
-    path('alerts/active/', alerts.ActiveAlertsView.as_view(), name='active-alerts'),
+    path('alerts/active/',        alerts.ActiveAlertsView.as_view(),     name='active-alerts'),
 
-    # AI Detection
-    path('ai/detect/', alerts.DetectDiseaseView.as_view(), name='ai-detect'),
-    path('ai/history/', alerts.DetectionHistoryView.as_view(), name='detection-history'),
-    path('ai/detections/<int:pk>/', alerts.DetectionDetailView.as_view(), name='detection-detail'),
-    path('health/lameness/detect/',  health.LamenessDetectionView.as_view()),
-    path('health/lameness/history/', health.LamenessDetectionHistoryView.as_view()),
+    # ── AI Detection ──────────────────────────────────────────────────────────
+    path('ai/detect/',               alerts.DetectDiseaseView.as_view(),    name='ai-detect'),
+    path('ai/history/',              alerts.DetectionHistoryView.as_view(), name='detection-history'),
+    path('ai/detections/<int:pk>/',  alerts.DetectionDetailView.as_view(), name='detection-detail'),
 
-    
-    path('costs/transactions/', costs.TransactionListCreateView.as_view(), name='transaction-list-create'),
-    path('costs/transactions/<int:pk>/', costs.TransactionDetailView.as_view(), name='transaction-detail'),
-    path('costs/summary/', costs.SummaryView.as_view(), name='costs-summary'),
-    path('costs/report/', costs.ReportView.as_view(), name='costs-report'),
-    path('costs/breakdown/', costs.CategoryBreakdownView.as_view(), name='costs-breakdown'),
+    # ── Costs ─────────────────────────────────────────────────────────────────
+    path('costs/transactions/',          costs.TransactionListCreateView.as_view(), name='transaction-list-create'),
+    path('costs/transactions/<int:pk>/', costs.TransactionDetailView.as_view(),     name='transaction-detail'),
+    path('costs/summary/',               costs.SummaryView.as_view(),               name='costs-summary'),
+    path('costs/report/',                costs.ReportView.as_view(),                name='costs-report'),
+    path('costs/breakdown/',             costs.CategoryBreakdownView.as_view(),     name='costs-breakdown'),
 ]

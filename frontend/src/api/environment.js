@@ -5,49 +5,74 @@ import axios from './axios';
  */
 export const environmentAPI = {
   /**
-   * Get current environmental status
-   * @param {string} city - Optional city name to search
+   * Get current weather status
+   * @param {string} city - City name (optional)
+   * @param {Object} coords - Coordinates { latitude, longitude } (optional)
+   * @returns {Promise} API response
    */
-  getCurrentStatus: (city) =>
-    axios.get('/environment/status/', { params: city ? { city } : {} }),
+  getCurrentStatus: (city, coords) => {
+    const params = {};
+    if (city) params.city = city;
+    if (coords?.latitude) params.latitude = coords.latitude;
+    if (coords?.longitude) params.longitude = coords.longitude;
+    
+    return axios.get('/environment/status/', { params });
+  },
 
   /**
-   * Get environmental statistics
-   * @param {string} city - Optional city name
+   * Get environment statistics
+   * @param {string} city - City name (optional)
+   * @returns {Promise} API response
    */
-  getStatistics: (city) =>
-    axios.get('/environment/statistics/', { params: city ? { city } : {} }),
+  getStatistics: (city) => {
+    const params = city ? { city } : {};
+    return axios.get('/environment/statistics/', { params });
+  },
 
   /**
    * Get weather forecast
-   * @param {number} days - Number of days (max 5 on free OWM tier)
-   * @param {string} city - Optional city name
+   * @param {number} days - Number of days (1-7)
+   * @param {string} city - City name (optional)
+   * @returns {Promise} API response
    */
-  getForecast: (days = 7, city) =>
-    axios.get('/environment/forecast/', { params: { days, ...(city ? { city } : {}) } }),
+  getForecast: (days = 7, city) => {
+    const params = { days };
+    if (city) params.city = city;
+    return axios.get('/environment/forecast/', { params });
+  },
 
   /**
-   * Get livestock weather alerts
-   * @param {string} city - Optional city name
+   * Get environment alerts
+   * @param {string} city - City name (optional)
+   * @returns {Promise} API response
    */
-  getAlerts: (city) =>
-    axios.get('/environment/alerts/', { params: city ? { city } : {} }),
+  getAlerts: (city) => {
+    const params = city ? { city } : {};
+    return axios.get('/environment/alerts/', { params });
+  },
 
   /**
-   * Get environmental history
+   * Get environment history
+   * @param {string} startDate - Start date (YYYY-MM-DD)
+   * @param {string} endDate - End date (YYYY-MM-DD)
+   * @param {string} city - City name (optional)
+   * @returns {Promise} API response
    */
-  getHistory: (params) =>
-    axios.get('/environment/history/', { params }),
+  getHistory: (startDate, endDate, city) => {
+    const params = { start_date: startDate, end_date: endDate };
+    if (city) params.city = city;
+    return axios.get('/environment/history/', { params });
+  },
 
   /**
-   * Record environmental data
+   * Get optimal conditions for livestock
+   * @returns {Promise} API response
    */
-  recordData: (data) =>
-    axios.post('/environment/record/', data),
+  getOptimalConditions: () => axios.get('/environment/optimal/'),
 
   /**
-   * Get optimal conditions for a species
+   * Get weather for all user's farms
+   * @returns {Promise} API response with farms weather data
    */
-  getOptimalConditions: (species) =>
-    axios.get('/environment/optimal/', { params: { species } }),
+  getFarmsWeather: () => axios.get('/environment/farms-weather/'),
 };

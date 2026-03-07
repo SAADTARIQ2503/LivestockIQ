@@ -16,3 +16,4 @@ from .health import (
     VaccinationScheduleCreateSerializer,
     VaccineDatasetSerializer
 )
+from .farms import FarmSerializer, FarmCreateSerializer

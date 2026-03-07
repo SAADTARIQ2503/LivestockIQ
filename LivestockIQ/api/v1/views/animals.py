@@ -6,8 +6,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
+from datetime import date, timedelta
 from animals.models import Animal
-from health.models import VaccineDataset
+from health.models import VaccineDataset, VaccinationSchedule
 from api.v1.serializers import (
     AnimalSerializer,
     AnimalListSerializer,
@@ -35,10 +36,13 @@ class AnimalViewSet(viewsets.ModelViewSet):
         queryset = Animal.objects.filter(user=self.request.user).order_by('-id')
 
         # Support optional query-param filters on the list endpoint
+        farm_id = self.request.query_params.get('farm')
         animal_type = self.request.query_params.get('animal_type')
         sex = self.request.query_params.get('sex')
         is_healthy = self.request.query_params.get('is_healthy')
 
+        if farm_id:
+            queryset = queryset.filter(farm_id=farm_id)
         if animal_type:
             queryset = queryset.filter(animal_type__iexact=animal_type)
         if sex:
@@ -60,6 +64,10 @@ class AnimalViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         animal = serializer.save()
 
+        # AUTO-CREATE VACCINATION SCHEDULE if animal is unhealthy
+        if not animal.is_healthy and animal.required_vaccine:
+            self._auto_create_vaccination_schedule(animal)
+
         return Response({
             'message': f'Animal {animal.id} added successfully!',
             'data': AnimalSerializer(animal, context={'request': request}).data,
@@ -68,14 +76,48 @@ class AnimalViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        
+        # Track if health status is changing from healthy to unhealthy
+        was_healthy = instance.is_healthy
+        
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         animal = serializer.save()
+
+        # AUTO-CREATE VACCINATION SCHEDULE if newly marked as unhealthy
+        if was_healthy and not animal.is_healthy and animal.required_vaccine:
+            self._auto_create_vaccination_schedule(animal)
 
         return Response({
             'message': f'Animal {animal.id} updated successfully!',
             'data': AnimalSerializer(animal, context={'request': request}).data,
         })
+
+    def _auto_create_vaccination_schedule(self, animal):
+        """
+        Automatically create a vaccination schedule when animal is marked unhealthy
+        """
+        # Check if schedule already exists for this vaccine
+        existing_schedule = VaccinationSchedule.objects.filter(
+            animal=animal,
+            vaccine_name=animal.required_vaccine,
+            is_completed=False
+        ).first()
+        
+        if existing_schedule:
+            return  # Schedule already exists
+        
+        # Create new schedule for 7 days from now (default)
+        schedule_date = date.today() + timedelta(days=7)
+        
+        VaccinationSchedule.objects.create(
+            animal=animal,
+            vaccine_name=animal.required_vaccine,
+            schedule_date=schedule_date,
+            dose_notes=f'Auto-scheduled for unhealthy animal',
+            is_group=False,
+            is_completed=False
+        )
 
     @action(detail=False, methods=['get'])
     def search(self, request):
@@ -146,7 +188,6 @@ class AnimalViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ✅ Correct field name: animal_species (not species)
         vaccines = VaccineDataset.objects.filter(
             animal_species__icontains=species
         ).values_list('vaccine_name', flat=True).distinct().order_by('vaccine_name')

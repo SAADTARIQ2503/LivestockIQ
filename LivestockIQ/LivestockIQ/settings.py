@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'health',
     'alerts',
     'costs',
+    'farms',
 ]
 
 MIDDLEWARE = [
@@ -235,6 +236,7 @@ SPECTACULAR_SETTINGS = {
 # External API Keys
 API_KEYS = {
     'OPENWEATHERMAP': os.environ.get('OPENWEATHERMAP_KEY'),
+    'GOOGLE_MAPS':    os.environ.get('GOOGLE_MAPS_API_KEY'),
 }
 
 # File upload settings

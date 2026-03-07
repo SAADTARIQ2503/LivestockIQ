@@ -4,20 +4,23 @@ import { ProtectedRoute } from './routes/ProtectedRoute';
 import { PublicRoute } from './routes/PublicRoute';
 import Toast from './components/shared/Toast';
 
-// Pages
+// Auth
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+
+// Layout
+import Layout from './components/layout/Layout';
+
+// Pages
+import Dashboard from './pages/dashboard/Dashboard';
 import AnimalsList from './pages/animals/AnimalsList';
 import AddAnimal from './pages/animals/AddAnimal';
-import Dashboard from './pages/dashboard/Dashboard';
-import Layout from './components/layout/Layout';
-import VaccinationsList from './pages/vaccinations/VaccinationsList';
-import ScheduleVaccination from './pages/vaccinations/ScheduleVaccination'; 
-import VaccineRecommendations from './pages/vaccinations/RecommendedVaccines.jsx';
-VaccineRecommendations
-import Environment from './pages/environment/Environment';
 import EditAnimal from './pages/animals/EditAnimal';
 import AnimalDetail from './pages/animals/AnimalDetail';
+import VaccinationsList from './pages/vaccinations/VaccinationsList';
+import ScheduleVaccination from './pages/vaccinations/ScheduleVaccination';
+import VaccineRecommendations from './pages/vaccinations/RecommendedVaccines.jsx';
+import Environment from './pages/environment/Environment';
 import CostTracker from './pages/costs/CostTracker';
 import AddTransaction from './pages/costs/AddTransaction';
 import FinancialReport from './pages/costs/FinancialReport';
@@ -25,109 +28,82 @@ import AlertsList from './pages/alerts/AlertsList';
 import AIDetection from './pages/ai-detection/AIDetection';
 import DetectionHistory from './pages/ai-detection/DetectionHistory';
 
+// New pages
+import FarmsList from './pages/farms/FarmsList';
+import AddFarm from './pages/farms/AddFarm';
+import EditFarm from './pages/farms/EditFarm';
+import FarmDetail from './pages/farms/FarmDetail';
+import Profile from './pages/profile/Profile';
+
 import './index.css';
 
-// Create React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
+    queries: { refetchOnWindowFocus: false, retry: 1, staleTime: 5 * 60 * 1000 },
   },
 });
 
-/**
- * Main App Component
- */
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Toast />
         <Routes>
-          {/* Public Routes (Login/Register) */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            }
-          />
+          {/* Public */}
+          <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
-          {/* Protected Routes (Dashboard and Apps) */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
+          {/* Protected */}
+          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            
-            {/* Future routes */}
-            <Route path="animals" element={<AnimalsList />} />
-            <Route path="animals/add" element={<AddAnimal />} />
-            <Route path="animals/edit/:id" element={<EditAnimal />} />
-            <Route path="animals/:id" element={<AnimalDetail />} />
 
-            {/* Vaccinations routes */}
-            <Route path="vaccinations" element={<VaccinationsList />} />
-            <Route path="vaccinations/schedule" element={<ScheduleVaccination />} />
-            {/* <Route path="vaccinations/recommended" element={<RecommendedVaccines />} /> */}
-            <Route path="/vaccinations/recommended" element={<VaccineRecommendations />} />
-            {/* Environment routes */}
+            {/* Farms */}
+            <Route path="farms"           element={<FarmsList />} />
+            <Route path="farms/add"       element={<AddFarm />} />
+            <Route path="farms/:id"       element={<FarmDetail />} />
+            <Route path="farms/:id/edit"  element={<EditFarm />} />
+
+            {/* Animals */}
+            <Route path="animals"          element={<AnimalsList />} />
+            <Route path="animals/add"      element={<AddAnimal />} />
+            <Route path="animals/edit/:id" element={<EditAnimal />} />
+            <Route path="animals/:id"      element={<AnimalDetail />} />
+
+            {/* Vaccinations */}
+            <Route path="vaccinations"             element={<VaccinationsList />} />
+            <Route path="vaccinations/schedule"    element={<ScheduleVaccination />} />
+            <Route path="vaccinations/recommended" element={<VaccineRecommendations />} />
+
+            {/* Environment */}
             <Route path="environment" element={<Environment />} />
 
-
-            <Route path="costs" element={<CostTracker />} />
-            <Route path="costs/add" element={<AddTransaction />} />
+            {/* Costs */}
+            <Route path="costs"        element={<CostTracker />} />
+            <Route path="costs/add"    element={<AddTransaction />} />
             <Route path="costs/report" element={<FinancialReport />} />
 
-            
-            
-              {/* Alerts routes */}
-              <Route path="alerts" element={<AlertsList />} />
+            {/* Alerts */}
+            <Route path="alerts" element={<AlertsList />} />
 
-              {/* AI Detection routes */}
-              <Route path="ai-detection" element={<AIDetection />} />
-              <Route path="ai-detection/history" element={<DetectionHistory />} />
+            {/* AI Detection */}
+            <Route path="ai-detection"         element={<AIDetection />} />
+            <Route path="ai-detection/history" element={<DetectionHistory />} />
 
-
-            
-            {/* <Route path="vaccinations" element={<Vaccinations />} /> */}
-            {/* <Route path="environment" element={<Environment />} /> */}
-            {/* <Route path="alerts" element={<Alerts />} /> */}
-            {/* <Route path="costs" element={<CostCalculator />} /> */}
+            {/* Profile */}
+            <Route path="profile" element={<Profile />} />
           </Route>
 
-          {/* 404 - Not Found */}
-          <Route
-            path="*"
-            element={
-              <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
-                  <p className="text-xl text-gray-600 mb-8">Page not found</p>
-                  <a href="/login" className="text-primary hover:underline">
-                    Go to Login
-                  </a>
-                </div>
+          {/* 404 */}
+          <Route path="*" element={
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+              <div className="text-center">
+                <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
+                <p className="text-xl text-gray-600 mb-8">Page not found</p>
+                <a href="/dashboard" className="text-primary hover:underline">Go to Dashboard</a>
               </div>
-            }
-          />
+            </div>
+          } />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

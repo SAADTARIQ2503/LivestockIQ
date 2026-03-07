@@ -1,209 +1,171 @@
 """
-Animals App Serializers for LivestockIQ API
-Handles animal CRUD operations and related data
+Animals Serializers
 """
-
 from rest_framework import serializers
 from animals.models import Animal
-from health.models import VaccineDataset
-
-
-class AnimalSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Animal model — used for retrieve/update responses.
-    """
-    user = serializers.ReadOnlyField(source='user.username')
-    required_vaccine_display = serializers.SerializerMethodField()
-    health_status = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Animal
-        fields = (
-            'id',
-            'user',
-            'animal_type',
-            'age',
-            'sex',
-            'is_healthy',
-            'required_vaccine',
-            'required_vaccine_display',
-            'health_status',
-        )
-        read_only_fields = ('id', 'user')
-
-    def get_required_vaccine_display(self, obj):
-        if not obj.is_healthy and obj.required_vaccine:
-            return obj.required_vaccine
-        return None
-
-    def get_health_status(self, obj):
-        if obj.is_healthy:
-            return "Healthy"
-        elif obj.required_vaccine:
-            return f"Requires: {obj.required_vaccine}"
-        return "Unhealthy"
-
-    def validate_animal_type(self, value):
-        valid_types = ['Cow', 'Goat', 'Sheep']
-        if value not in valid_types:
-            raise serializers.ValidationError(
-                f"Animal type must be one of: {', '.join(valid_types)}"
-            )
-        return value
-
-    def validate_sex(self, value):
-        valid_sexes = ['Male', 'Female']
-        if value not in valid_sexes:
-            raise serializers.ValidationError("Sex must be either 'Male' or 'Female'")
-        return value
-
-    def validate_age(self, value):
-        try:
-            age = int(value)
-        except (ValueError, TypeError):
-            raise serializers.ValidationError("Age must be a valid number.")
-        if age < 1:
-            raise serializers.ValidationError("Age must be at least 1 month.")
-        if age > 600:
-            raise serializers.ValidationError("Age seems unrealistically high. Please enter age in months (max 600).")
-        return str(age)
-
-    def validate(self, attrs):
-        is_healthy = attrs.get('is_healthy', True)
-        required_vaccine = attrs.get('required_vaccine')
-
-        if not is_healthy and not required_vaccine:
-            raise serializers.ValidationError({
-                'required_vaccine': 'A required vaccine must be specified for unhealthy animals.'
-            })
-
-        if is_healthy:
-            attrs['required_vaccine'] = None
-
-        return attrs
+from health.models import VaccinationSchedule
 
 
 class AnimalListSerializer(serializers.ModelSerializer):
     """
-    Simplified serializer for listing animals.
-    Exposes required_vaccine so the frontend can display it on cards.
+    Simplified serializer for animal lists
     """
-    health_badge = serializers.SerializerMethodField()
-
+    farm_name = serializers.SerializerMethodField()
+    vaccination_status = serializers.SerializerMethodField()
+    pending_vaccinations = serializers.SerializerMethodField()
+    
     class Meta:
         model = Animal
-        fields = (
+        fields = [
             'id',
             'animal_type',
             'age',
             'sex',
             'is_healthy',
             'required_vaccine',
-            'health_badge',
-        )
-
-    def get_health_badge(self, obj):
-        if obj.is_healthy:
-            return {'status': 'healthy', 'text': 'Healthy', 'color': 'green'}
+            'farm',
+            'farm_name',
+            'vaccination_status',
+            'pending_vaccinations',
+        ]
+    
+    def get_farm_name(self, obj):
+        """Return farm name if farm exists"""
+        return obj.farm.name if obj.farm else None
+    
+    def get_vaccination_status(self, obj):
+        """Return vaccination status summary"""
+        schedules = VaccinationSchedule.objects.filter(animal=obj)
+        total = schedules.count()
+        completed = schedules.filter(is_completed=True).count()
+        pending = schedules.filter(is_completed=False).count()
+        
         return {
-            'status': 'unhealthy',
-            'text': f'Needs: {obj.required_vaccine}' if obj.required_vaccine else 'Unhealthy',
-            'color': 'red',
+            'total': total,
+            'completed': completed,
+            'pending': pending,
+            'has_vaccinations': total > 0
+        }
+    
+    def get_pending_vaccinations(self, obj):
+        """Return count of pending vaccinations"""
+        return VaccinationSchedule.objects.filter(
+            animal=obj,
+            is_completed=False
+        ).count()
+
+
+class AnimalSerializer(serializers.ModelSerializer):
+    """
+    Full serializer for animal details with vaccination history
+    """
+    farm_name = serializers.SerializerMethodField()
+    farm_address = serializers.SerializerMethodField()
+    vaccination_history = serializers.SerializerMethodField()
+    vaccination_status = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Animal
+        fields = [
+            'id',
+            'animal_type',
+            'age',
+            'sex',
+            'is_healthy',
+            'required_vaccine',
+            'farm',
+            'farm_name',
+            'farm_address',
+            'vaccination_history',
+            'vaccination_status',
+            'user',
+        ]
+        read_only_fields = ['id', 'user']
+    
+    def get_farm_name(self, obj):
+        """Return farm name"""
+        return obj.farm.name if obj.farm else None
+    
+    def get_farm_address(self, obj):
+        """Return farm address"""
+        return obj.farm.address if obj.farm else None
+    
+    def get_vaccination_history(self, obj):
+        """Return complete vaccination history for this animal"""
+        schedules = VaccinationSchedule.objects.filter(animal=obj).order_by('-schedule_date')
+        
+        return [{
+            'id': schedule.id,
+            'vaccine_name': schedule.vaccine_name,
+            'schedule_date': schedule.schedule_date,
+            'dose_notes': schedule.dose_notes,
+            'is_completed': schedule.is_completed,
+            'status': 'Completed' if schedule.is_completed else (
+                'Overdue' if schedule.schedule_date < date.today() else 'Scheduled'
+            )
+        } for schedule in schedules]
+    
+    def get_vaccination_status(self, obj):
+        """Return vaccination status summary"""
+        from datetime import date
+        
+        schedules = VaccinationSchedule.objects.filter(animal=obj)
+        total = schedules.count()
+        completed = schedules.filter(is_completed=True).count()
+        pending = schedules.filter(is_completed=False).count()
+        overdue = schedules.filter(is_completed=False, schedule_date__lt=date.today()).count()
+        
+        return {
+            'total': total,
+            'completed': completed,
+            'pending': pending,
+            'overdue': overdue,
+            'has_vaccinations': total > 0,
+            'fully_vaccinated': pending == 0 and total > 0
         }
 
 
 class AnimalCreateSerializer(serializers.ModelSerializer):
     """
-    Serializer for creating/updating animals with full validation.
+    Serializer for creating/updating animals
     """
     class Meta:
         model = Animal
-        fields = (
+        fields = [
             'animal_type',
             'age',
             'sex',
             'is_healthy',
             'required_vaccine',
-        )
-
-    def validate_animal_type(self, value):
-        valid_types = ['Cow', 'Goat', 'Sheep']
-        if value not in valid_types:
-            raise serializers.ValidationError(
-                f"Animal type must be one of: {', '.join(valid_types)}"
-            )
-        return value
-
-    def validate_sex(self, value):
-        valid_sexes = ['Male', 'Female']
-        if value not in valid_sexes:
-            raise serializers.ValidationError("Sex must be either 'Male' or 'Female'")
-        return value
-
-    def validate_age(self, value):
-        try:
-            age = int(value)
-        except (ValueError, TypeError):
-            raise serializers.ValidationError("Age must be a valid number.")
-        if age < 1:
-            raise serializers.ValidationError("Age must be at least 1 month.")
-        if age > 600:
-            raise serializers.ValidationError("Age seems unrealistically high. Please enter age in months (max 600).")
-        return str(age)
-
+            'farm',
+        ]
+    
     def validate(self, attrs):
+        """Validate animal data"""
         is_healthy = attrs.get('is_healthy', True)
-        required_vaccine = attrs.get('required_vaccine', '').strip() if attrs.get('required_vaccine') else ''
-        animal_type = attrs.get('animal_type', '')
-
-        if not is_healthy:
-            if not required_vaccine:
-                raise serializers.ValidationError({
-                    'required_vaccine': 'A required vaccine must be specified for unhealthy animals.'
-                })
-
-            # ✅ Use correct field name: animal_species (not species)
-            vaccine_exists = VaccineDataset.objects.filter(
-                animal_species__icontains=animal_type,
-                vaccine_name__iexact=required_vaccine,
-            ).exists()
-
-            if not vaccine_exists:
-                raise serializers.ValidationError({
-                    'required_vaccine': (
-                        f'Vaccine "{required_vaccine}" is not recognised for {animal_type}. '
-                        f'Please select a vaccine from the dropdown.'
-                    )
-                })
-        else:
+        required_vaccine = attrs.get('required_vaccine')
+        
+        # If animal is unhealthy, required_vaccine should be set
+        if not is_healthy and not required_vaccine:
+            raise serializers.ValidationError({
+                'required_vaccine': 'Required vaccine must be specified for unhealthy animals.'
+            })
+        
+        # If animal is healthy, clear required_vaccine
+        if is_healthy:
             attrs['required_vaccine'] = None
-
+        
         return attrs
-
+    
     def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['user'] = user
+        """Create animal with current user"""
+        validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
-
-
-class VaccineBySpeciesSerializer(serializers.Serializer):
-    """
-    Serializer for returning vaccines by species.
-    """
-    species = serializers.ChoiceField(choices=['Cow', 'Goat', 'Sheep'], required=True)
-
-    def to_representation(self, instance):
-        species = self.validated_data.get('species')
-        # ✅ Use correct field name: animal_species
-        vaccines = VaccineDataset.objects.filter(
-            animal_species__icontains=species
-        ).values_list('vaccine_name', flat=True).distinct().order_by('vaccine_name')
-        return {'species': species, 'vaccines': list(vaccines)}
 
 
 class AnimalStatisticsSerializer(serializers.Serializer):
     """
-    Serializer for animal statistics.
+    Serializer for animal statistics
     """
     total_animals = serializers.IntegerField()
     healthy_animals = serializers.IntegerField()
@@ -211,3 +173,11 @@ class AnimalStatisticsSerializer(serializers.Serializer):
     animals_by_type = serializers.DictField()
     animals_by_sex = serializers.DictField()
     vaccination_needed = serializers.IntegerField()
+
+
+class VaccineBySpeciesSerializer(serializers.Serializer):
+    """
+    Serializer for vaccine by species response
+    """
+    species = serializers.CharField()
+    vaccines = serializers.ListField(child=serializers.CharField())
