@@ -203,10 +203,13 @@ export default function AnimalsList() {
 
             return (
               <div key={key} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                {/* Farm header */}
-                <button
+                {/* Farm header — using div not button to avoid nested <button> */}
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleFarm(key)}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  onKeyDown={e => e.key === 'Enter' && toggleFarm(key)}
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${isUnassigned ? 'bg-gray-200' : 'bg-primary/10'}`}>
@@ -248,7 +251,7 @@ export default function AnimalsList() {
                     )}
                     {isCollapsed ? <ChevronDown size={20} className="text-gray-400" /> : <ChevronUp size={20} className="text-gray-400" />}
                   </div>
-                </button>
+                </div>
 
                 {/* Animals grid */}
                 {!isCollapsed && (

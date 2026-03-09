@@ -1,6 +1,7 @@
 """
 Animals Serializers
 """
+from datetime import date
 from rest_framework import serializers
 from animals.models import Animal
 from health.models import VaccinationSchedule
@@ -107,8 +108,6 @@ class AnimalSerializer(serializers.ModelSerializer):
     
     def get_vaccination_status(self, obj):
         """Return vaccination status summary"""
-        from datetime import date
-        
         schedules = VaccinationSchedule.objects.filter(animal=obj)
         total = schedules.count()
         completed = schedules.filter(is_completed=True).count()

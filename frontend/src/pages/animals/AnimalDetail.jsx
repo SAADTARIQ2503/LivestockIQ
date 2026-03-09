@@ -1,5 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAnimal, useAnimals } from '@/hooks/useAnimals';
+import { useVaccinations } from '@/hooks/useVaccinations';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,8 +18,22 @@ import { formatDate } from '@/utils/formatters';
 export default function AnimalDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const { animal, isLoading } = useAnimal(id);
   const { deleteAnimal, isDeleting } = useAnimals();
+  const { markCompleted, isMarkingCompleted } = useVaccinations();
+
+  const handleMarkComplete = (scheduleId) => {
+    if (window.confirm('Mark this vaccination as completed?')) {
+      markCompleted(scheduleId, {
+        onSuccess: () => {
+          // Invalidate this animal's detail query so vaccination history refreshes
+          queryClient.invalidateQueries({ queryKey: ['animal', id] });
+          queryClient.invalidateQueries({ queryKey: ['animal', parseInt(id)] });
+        }
+      });
+    }
+  };
 
   /**
    * Handle delete animal
@@ -301,7 +317,21 @@ export default function AnimalDetail() {
                       )}
                     </div>
                   </div>
-                  {getVaccinationBadge(vaccination)}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {getVaccinationBadge(vaccination)}
+                    {!vaccination.is_completed && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMarkComplete(vaccination.id)}
+                        disabled={isMarkingCompleted}
+                        className="text-xs h-7 px-2 text-green-700 border-green-300 hover:bg-green-50"
+                      >
+                        <CheckCircle size={12} className="mr-1" />
+                        Done
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

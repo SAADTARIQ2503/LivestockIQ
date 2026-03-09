@@ -55,15 +55,23 @@ export default function ScheduleVaccination() {
         let response;
         if (selectedSpecies) {
           response = await healthAPI.getVaccinesBySpecies(selectedSpecies);
-          // getVaccinesBySpecies returns { species, vaccines: [name, ...] }
-          const names = response?.data?.vaccines || [];
-          setVaccines(names.map(name => ({ value: name, label: name })));
+          // Backend returns { species, count, results: [...vaccine objects] }
+          const raw = response?.data;
+          if (raw?.results && Array.isArray(raw.results)) {
+            const unique = [...new Map(raw.results.map(v => [v.vaccine_name, v])).values()];
+            setVaccines(unique.map(v => ({
+              value: v.vaccine_name,
+              label: v.vaccine_name,
+              disease: v.disease_name || '',
+            })));
+          } else if (raw?.vaccines && Array.isArray(raw.vaccines)) {
+            // Legacy flat name list fallback
+            setVaccines(raw.vaccines.map(name => ({ value: name, label: name, disease: '' })));
+          } else {
+            setVaccines([]);
+          }
         } else {
-          // No species selected (group vaccination or no animal chosen yet) — load all
-          response = await healthAPI.getSchedules({});
-          // Fall back to full vaccine list endpoint
-          const allRes = await healthAPI.getVaccineDetail && fetch('/api/v1/health/vaccines/');
-          // Use the dedicated list endpoint via healthAPI
+          // No species selected — load all vaccines from the list endpoint
           const listRes = await import('@/api/axios').then(m =>
             m.default.get('/health/vaccines/')
           );
@@ -72,7 +80,7 @@ export default function ScheduleVaccination() {
           setVaccines(unique.map(v => ({
             value: v.vaccine_name,
             label: v.vaccine_name,
-            disease: v.disease_name,  // ← was v.disease
+            disease: v.disease_name || '',
           })));
         }
       } catch (err) {
