@@ -22,10 +22,14 @@ export const environmentAPI = {
   /**
    * Get environment statistics
    * @param {string} city - City name (optional)
+   * @param {Object} coords - Coordinates { latitude, longitude } (optional)
    * @returns {Promise} API response
    */
-  getStatistics: (city) => {
-    const params = city ? { city } : {};
+  getStatistics: (city, coords) => {
+    const params = {};
+    if (city) params.city = city;
+    if (coords?.latitude) params.latitude = coords.latitude;
+    if (coords?.longitude) params.longitude = coords.longitude;
     return axios.get('/environment/statistics/', { params });
   },
 
@@ -33,21 +37,28 @@ export const environmentAPI = {
    * Get weather forecast
    * @param {number} days - Number of days (1-7)
    * @param {string} city - City name (optional)
+   * @param {Object} coords - Coordinates { latitude, longitude } (optional)
    * @returns {Promise} API response
    */
-  getForecast: (days = 7, city) => {
+  getForecast: (days = 7, city, coords) => {
     const params = { days };
     if (city) params.city = city;
+    if (coords?.latitude) params.latitude = coords.latitude;
+    if (coords?.longitude) params.longitude = coords.longitude;
     return axios.get('/environment/forecast/', { params });
   },
 
   /**
    * Get environment alerts
    * @param {string} city - City name (optional)
+   * @param {Object} coords - Coordinates { latitude, longitude } (optional)
    * @returns {Promise} API response
    */
-  getAlerts: (city) => {
-    const params = city ? { city } : {};
+  getAlerts: (city, coords) => {
+    const params = {};
+    if (city) params.city = city;
+    if (coords?.latitude) params.latitude = coords.latitude;
+    if (coords?.longitude) params.longitude = coords.longitude;
     return axios.get('/environment/alerts/', { params });
   },
 

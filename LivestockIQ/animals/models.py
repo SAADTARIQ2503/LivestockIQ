@@ -7,7 +7,7 @@ class Animal(models.Model):
     # New: link to farm (nullable so existing animals don't break)
     farm = models.ForeignKey(
         'farms.Farm',
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name='animals'

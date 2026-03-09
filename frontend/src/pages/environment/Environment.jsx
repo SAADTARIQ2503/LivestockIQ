@@ -66,21 +66,39 @@ export default function Environment() {
   // Get selected farm details
   const selectedFarm = farmsList.find(f => f.id === parseInt(selectedFarmId));
 
+  const farmCoords = selectedFarm?.latitude && selectedFarm?.longitude
+    ? { latitude: selectedFarm.latitude, longitude: selectedFarm.longitude }
+    : null;
+
   // Farm weather data - only fetch when farm is selected
   const { data: farmWeatherData, isLoading: isLoadingFarmWeather } = useQuery({
     queryKey: ['single-farm-weather', selectedFarmId],
-    queryFn: async () => {
-      if (!selectedFarm) return null;
-      
-      // Use the farm's latitude and longitude to get weather
-      const response = await environmentAPI.getCurrentStatus(undefined, {
-        latitude: selectedFarm.latitude,
-        longitude: selectedFarm.longitude,
-      });
-      
-      return response;
-    },
-    enabled: !!selectedFarmId && !!selectedFarm?.latitude && !!selectedFarm?.longitude,
+    queryFn: () => environmentAPI.getCurrentStatus(undefined, farmCoords),
+    enabled: !!selectedFarmId && !!farmCoords,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  const { data: farmStatsData } = useQuery({
+    queryKey: ['farm-statistics', selectedFarmId],
+    queryFn: () => environmentAPI.getStatistics(undefined, farmCoords),
+    enabled: !!selectedFarmId && !!farmCoords,
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+
+  const { data: farmForecastData } = useQuery({
+    queryKey: ['farm-forecast', selectedFarmId],
+    queryFn: () => environmentAPI.getForecast(7, undefined, farmCoords),
+    enabled: !!selectedFarmId && !!farmCoords,
+    staleTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+
+  const { data: farmAlertsData, isLoading: isLoadingFarmAlerts } = useQuery({
+    queryKey: ['farm-alerts', selectedFarmId],
+    queryFn: () => environmentAPI.getAlerts(undefined, farmCoords),
+    enabled: !!selectedFarmId && !!farmCoords,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
@@ -125,7 +143,10 @@ export default function Environment() {
   const stats    = statsData?.data;
   const forecast = forecastData?.data || [];
   const alerts   = alertsData?.data  || [];
-  const farmWeather = farmWeatherData?.data;
+  const farmWeather  = farmWeatherData?.data;
+  const farmStats    = farmStatsData?.data;
+  const farmForecast = farmForecastData?.data || [];
+  const farmAlerts   = farmAlertsData?.data  || [];
 
   const handleSearch = () => {
     const trimmed = cityInput.trim();
@@ -224,6 +245,7 @@ export default function Environment() {
                 </div>
               </div>
             ) : farmWeather ? (
+              <div className="space-y-6">
               <Card className="overflow-hidden">
                 <div className={`h-2 ${
                   farmWeather.status === 'optimal' ? 'bg-green-500' :
@@ -287,7 +309,7 @@ export default function Environment() {
                       <Cloud className="text-gray-500" size={20} />
                       <div>
                         <p className="text-xs text-gray-600">Weather</p>
-                        <p className="font-medium capitalize">{farmWeather.description}</p>
+                        <p className="font-medium capitalize">{farmWeather.weather_description}</p>
                       </div>
                     </div>
 
@@ -303,7 +325,7 @@ export default function Environment() {
                       <Sunrise className="text-orange-500" size={20} />
                       <div>
                         <p className="text-xs text-gray-600">Sunrise</p>
-                        <p className="font-medium">{formatTime(farmWeather.sunrise)}</p>
+                        <p className="font-medium">{farmWeather.sunrise}</p>
                       </div>
                     </div>
 
@@ -311,7 +333,7 @@ export default function Environment() {
                       <Sunset className="text-purple-500" size={20} />
                       <div>
                         <p className="text-xs text-gray-600">Sunset</p>
-                        <p className="font-medium">{formatTime(farmWeather.sunset)}</p>
+                        <p className="font-medium">{farmWeather.sunset}</p>
                       </div>
                     </div>
                   </div>
@@ -332,6 +354,91 @@ export default function Environment() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Farm Statistics */}
+              {farmStats && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp size={20} />
+                      Statistics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600 mb-1">Avg Temperature</p>
+                        <p className="text-2xl font-bold">{farmStats.temp_avg}°C</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600 mb-1">Max Temperature</p>
+                        <p className="text-2xl font-bold text-red-600">{farmStats.temp_max}°C</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600 mb-1">Min Temperature</p>
+                        <p className="text-2xl font-bold text-blue-600">{farmStats.temp_min}°C</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600 mb-1">Avg Humidity</p>
+                        <p className="text-2xl font-bold">{farmStats.humidity_avg}%</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Farm Forecast */}
+              {farmForecast.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar size={20} />
+                      7-Day Forecast
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                      {farmForecast.map((day, idx) => (
+                        <div key={idx} className="p-3 bg-gray-50 rounded-lg text-center hover:bg-gray-100 transition-colors">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">{formatDate(day.date)}</p>
+                          <Cloud className="mx-auto text-gray-600 mb-2" size={24} />
+                          <p className="text-lg font-bold text-gray-900 mb-1">{day.temp_max}°C</p>
+                          <p className="text-xs text-gray-600">{day.temp_min}°C</p>
+                          <p className="text-xs text-gray-500 mt-2 capitalize">{day.weather}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Farm Alerts */}
+              {!isLoadingFarmAlerts && farmAlerts.length > 0 && (
+                <Card className="border-orange-200 bg-orange-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-orange-900">
+                      <AlertTriangle size={20} />
+                      Weather Alerts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {farmAlerts.map((alert, idx) => (
+                        <div key={idx} className="p-4 bg-white rounded-lg border border-orange-200">
+                          <div className="flex items-start justify-between mb-2">
+                            <p className="font-semibold text-orange-900">{alert.title}</p>
+                            <Badge variant={alert.severity === 'critical' ? 'destructive' : 'warning'}>
+                              {alert.severity}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-orange-800">{alert.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              </div>
             ) : null}
           </>
         )}
@@ -478,7 +585,7 @@ export default function Environment() {
                         <Cloud className="text-gray-500" size={20} />
                         <div>
                           <p className="text-xs text-gray-600">Weather</p>
-                          <p className="font-medium capitalize">{s.description}</p>
+                          <p className="font-medium capitalize">{s.weather_description}</p>
                         </div>
                       </div>
 
@@ -494,7 +601,7 @@ export default function Environment() {
                         <Sunrise className="text-orange-500" size={20} />
                         <div>
                           <p className="text-xs text-gray-600">Sunrise</p>
-                          <p className="font-medium">{formatTime(s.sunrise)}</p>
+                          <p className="font-medium">{s.sunrise}</p>
                         </div>
                       </div>
 
@@ -502,7 +609,7 @@ export default function Environment() {
                         <Sunset className="text-purple-500" size={20} />
                         <div>
                           <p className="text-xs text-gray-600">Sunset</p>
-                          <p className="font-medium">{formatTime(s.sunset)}</p>
+                          <p className="font-medium">{s.sunset}</p>
                         </div>
                       </div>
                     </div>
@@ -537,19 +644,19 @@ export default function Environment() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="p-4 bg-gray-50 rounded-lg">
                           <p className="text-xs text-gray-600 mb-1">Avg Temperature</p>
-                          <p className="text-2xl font-bold">{stats.avg_temperature}°C</p>
+                          <p className="text-2xl font-bold">{stats.temp_avg}°C</p>
                         </div>
                         <div className="p-4 bg-gray-50 rounded-lg">
                           <p className="text-xs text-gray-600 mb-1">Max Temperature</p>
-                          <p className="text-2xl font-bold text-red-600">{stats.max_temperature}°C</p>
+                          <p className="text-2xl font-bold text-red-600">{stats.temp_max}°C</p>
                         </div>
                         <div className="p-4 bg-gray-50 rounded-lg">
                           <p className="text-xs text-gray-600 mb-1">Min Temperature</p>
-                          <p className="text-2xl font-bold text-blue-600">{stats.min_temperature}°C</p>
+                          <p className="text-2xl font-bold text-blue-600">{stats.temp_min}°C</p>
                         </div>
                         <div className="p-4 bg-gray-50 rounded-lg">
                           <p className="text-xs text-gray-600 mb-1">Avg Humidity</p>
-                          <p className="text-2xl font-bold">{stats.avg_humidity}%</p>
+                          <p className="text-2xl font-bold">{stats.humidity_avg}%</p>
                         </div>
                       </div>
                     </CardContent>
@@ -571,9 +678,9 @@ export default function Environment() {
                           <div key={idx} className="p-3 bg-gray-50 rounded-lg text-center hover:bg-gray-100 transition-colors">
                             <p className="text-xs font-semibold text-gray-700 mb-2">{formatDate(day.date)}</p>
                             <Cloud className="mx-auto text-gray-600 mb-2" size={24} />
-                            <p className="text-lg font-bold text-gray-900 mb-1">{day.max_temp}°C</p>
-                            <p className="text-xs text-gray-600">{day.min_temp}°C</p>
-                            <p className="text-xs text-gray-500 mt-2 capitalize">{day.description}</p>
+                            <p className="text-lg font-bold text-gray-900 mb-1">{day.temp_max}°C</p>
+                            <p className="text-xs text-gray-600">{day.temp_min}°C</p>
+                            <p className="text-xs text-gray-500 mt-2 capitalize">{day.weather}</p>
                           </div>
                         ))}
                       </div>

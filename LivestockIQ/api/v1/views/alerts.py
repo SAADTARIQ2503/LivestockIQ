@@ -128,7 +128,22 @@ class DetectDiseaseView(APIView):
                     )
                 
                 detector = DiseaseDetector(model_path)
-                result = detector.predict(detection.image.path)
+
+                # Use image if provided, otherwise extract first frame from video
+                if detection.image:
+                    media_path = detection.image.path
+                else:
+                    import cv2, tempfile
+                    cap = cv2.VideoCapture(detection.video.path)
+                    ret, frame = cap.read()
+                    cap.release()
+                    if not ret:
+                        raise ValueError('Could not extract frame from video.')
+                    tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+                    cv2.imwrite(tmp.name, frame)
+                    media_path = tmp.name
+
+                result = detector.predict(media_path)
                 
                 # Update detection
                 detection.predicted_disease = result['disease']

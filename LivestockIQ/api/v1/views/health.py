@@ -5,13 +5,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from datetime import datetime, date
-from health.models import VaccinationSchedule, VaccineDataset
+from django.conf import settings
+import os
+from health.models import VaccinationSchedule, VaccineDataset, LamenessDetection
 from animals.models import Animal
 from api.v1.serializers.health import (
     VaccinationScheduleSerializer,
     VaccinationScheduleCreateSerializer,
     VaccineDatasetSerializer,
+    LamenessDetectionSerializer,
 )
 
 
@@ -192,22 +196,114 @@ class VaccineDatasetViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def recommended(self, request):
         """
-        Get recommended vaccines based on filters
-        GET /api/v1/health/vaccines/recommended/?species=Cow&season=Spring
+        Get recommended vaccines using LSH similarity search.
+        GET /api/v1/health/vaccines/recommended/?q=foot+and+mouth&species=Cow&season=Spring&top_n=12
         """
-        species = request.query_params.get('species')
-        season = request.query_params.get('season')
-        
-        queryset = VaccineDataset.objects.all()
-        
-        if species:
-            queryset = queryset.filter(animal_species__icontains=species)
-        
-        if season:
-            queryset = queryset.filter(vaccination_season__icontains=season)
-        
-        serializer = VaccineDatasetSerializer(queryset, many=True)
+        from health.lsh.vaccine_recommender import VaccineRecommender
+
+        q = request.query_params.get('q', '').strip()
+        species = request.query_params.get('species', '').strip()
+        season = request.query_params.get('season', '').strip()
+        top_n = int(request.query_params.get('top_n', 10))
+
+        # Build query string from params if no explicit query provided
+        if not q:
+            parts = []
+            if season:
+                parts.append(season)
+            if species:
+                parts.append(species)
+            else:
+                parts.append('cattle buffalo sheep goat livestock vaccine')
+            q = ' '.join(parts)
+
+        try:
+            recommender = VaccineRecommender.get_instance()
+            results = recommender.recommend(q, top_n=top_n)
+        except Exception as e:
+            return Response(
+                {'error': f'Recommendation engine error: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         return Response({
-            'count': queryset.count(),
-            'results': serializer.data
+            'count': len(results),
+            'results': results,
         })
+
+
+class LamenessDetectView(APIView):
+    """POST /api/v1/health/lameness/detect/ — run ViT-LSTM on uploaded video."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from ai_service.lameness_detector import LamenessDetector
+        from alerts.models import Alert
+
+        video = request.FILES.get('file')
+        animal_id = request.data.get('animal_id')
+
+        if not video:
+            return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not video.content_type.startswith('video/'):
+            return Response({'error': 'Uploaded file must be a video.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save detection record (video stored via FileField)
+        detection = LamenessDetection.objects.create(
+            user=request.user,
+            animal_id=animal_id if animal_id else None,
+            video=video,
+            predicted_result='normal',
+            confidence=0.0,
+        )
+
+        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'best_livestock_lameness_model.pth')
+        if not os.path.exists(model_path):
+            detection.delete()
+            return Response(
+                {'error': 'Lameness model not found. Please contact the administrator.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            detector = LamenessDetector(model_path)
+            result = detector.predict(detection.video.path)
+        except Exception as e:
+            detection.delete()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Persist result
+        detection.predicted_result = result['disease']
+        detection.confidence = result['confidence']
+        detection.all_probabilities = result['all_probabilities']
+        detection.processing_time = result['processing_time']
+        detection.frames_sampled = result['frames_sampled']
+        detection.save()
+
+        # Auto-create alert if lameness detected with high confidence
+        if result['disease'] == 'lameness' and result['confidence'] > 0.70:
+            severity = 'critical' if result['confidence'] > 0.90 else 'warning'
+            Alert.objects.create(
+                user=request.user,
+                title='Lameness Detected',
+                message=f"ViT-LSTM detected lameness with {result['confidence']*100:.1f}% confidence.",
+                severity=severity,
+                animal_id=animal_id if animal_id else None,
+                lameness_detection=detection,
+            )
+
+        return Response({
+            'detection_id': detection.id,
+            'result': result,
+        })
+
+
+class LamenessHistoryView(APIView):
+    """GET /api/v1/health/lameness/history/ — list past lameness detections."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = LamenessDetection.objects.filter(user=request.user)
+        serializer = LamenessDetectionSerializer(qs, many=True, context={'request': request})
+        return Response(serializer.data)

@@ -91,7 +91,7 @@ class AlertSerializer(serializers.ModelSerializer):
         model = Alert
         fields = [
             'id', 'title', 'message', 'severity',
-            'animal', 'detection', 'is_resolved', 'resolved_at',
+            'animal', 'detection', 'lameness_detection', 'is_resolved', 'resolved_at',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'resolved_at']

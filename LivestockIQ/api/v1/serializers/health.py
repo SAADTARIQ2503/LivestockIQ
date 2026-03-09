@@ -2,7 +2,7 @@
 Health/Vaccination Serializers
 """
 from rest_framework import serializers
-from health.models import VaccinationSchedule, VaccineDataset
+from health.models import VaccinationSchedule, VaccineDataset, LamenessDetection
 from animals.models import Animal
 
 
@@ -137,3 +137,13 @@ class VaccinationScheduleCreateSerializer(serializers.ModelSerializer):
             })
         
         return attrs
+
+
+class LamenessDetectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LamenessDetection
+        fields = (
+            'id', 'animal', 'video', 'predicted_result', 'confidence',
+            'all_probabilities', 'processing_time', 'frames_sampled', 'created_at',
+        )
+        read_only_fields = fields

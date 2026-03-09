@@ -74,16 +74,20 @@ export const healthAPI = {
   getVaccineDetail: (id) => axios.get(`/health/vaccines/${id}/`),
 
   /**
-   * Get vaccines by species
+   * Get vaccines by species (FIXED: using underscore to match ViewSet @action)
    * @param {string} species - Animal species
    * @returns {Promise} API response with vaccines
    */
   getVaccinesBySpecies: (species) => 
-    axios.get('/health/vaccines/by-species/', { params: { species } }),
+    axios.get('/health/vaccines/by_species/', { params: { species } }),
   
-  getVaccineRecommendations: (params) => 
-    axios.get('/health/vaccines/recommend/', { params }),
-  
+  /**
+   * Get vaccination history for a specific animal
+   * @param {number} animalId - Animal ID
+   * @returns {Promise} API response with vaccination history
+   */
   getByAnimal: (animalId) =>
     axios.get('/health/schedules/by_animal/', { params: { animal_id: animalId } }),
+  
+  getVaccineRecommendations: (params) => axios.get('/health/vaccines/recommended/', { params }),
 };

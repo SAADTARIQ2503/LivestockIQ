@@ -188,6 +188,7 @@ class EnvironmentStatusView(APIView):
 class EnvironmentStatisticsView(APIView):
     """
     GET /api/v1/environment/statistics/?city=<name>
+                                       &latitude=<lat>&longitude=<lon>
 
     Returns today's min/max/avg derived from OWM current weather.
     (Full historical stats would need a stored EnvironmentReading model.)
@@ -199,9 +200,16 @@ class EnvironmentStatisticsView(APIView):
             return Response({'error': 'API key not configured.'}, status=503)
 
         city = request.query_params.get('city', '').strip()
+        req_lat = request.query_params.get('latitude', '').strip()
+        req_lon = request.query_params.get('longitude', '').strip()
         lat, lon = FARM_LAT, FARM_LON
 
-        if city:
+        if req_lat and req_lon:
+            try:
+                lat, lon = float(req_lat), float(req_lon)
+            except ValueError:
+                pass
+        elif city:
             g_lat, g_lon, _ = get_coordinates(city)
             if g_lat:
                 lat, lon = g_lat, g_lon
@@ -226,6 +234,7 @@ class EnvironmentStatisticsView(APIView):
 class EnvironmentForecastView(APIView):
     """
     GET /api/v1/environment/forecast/?days=7&city=<name>
+                                      &latitude=<lat>&longitude=<lon>
 
     Returns a daily forecast (up to 5 days) from OWM free-tier 3-hour forecast.
     """
@@ -236,9 +245,16 @@ class EnvironmentForecastView(APIView):
             return Response({'error': 'API key not configured.'}, status=503)
 
         city = request.query_params.get('city', '').strip()
+        req_lat = request.query_params.get('latitude', '').strip()
+        req_lon = request.query_params.get('longitude', '').strip()
         lat, lon = FARM_LAT, FARM_LON
 
-        if city:
+        if req_lat and req_lon:
+            try:
+                lat, lon = float(req_lat), float(req_lon)
+            except ValueError:
+                pass
+        elif city:
             g_lat, g_lon, _ = get_coordinates(city)
             if g_lat:
                 lat, lon = g_lat, g_lon
@@ -286,6 +302,7 @@ class EnvironmentForecastView(APIView):
 class EnvironmentAlertsView(APIView):
     """
     GET /api/v1/environment/alerts/?city=<name>
+                                    &latitude=<lat>&longitude=<lon>
 
     Returns livestock-relevant weather alerts based on current conditions.
     """
@@ -296,9 +313,16 @@ class EnvironmentAlertsView(APIView):
             return Response({'error': 'API key not configured.'}, status=503)
 
         city = request.query_params.get('city', '').strip()
+        req_lat = request.query_params.get('latitude', '').strip()
+        req_lon = request.query_params.get('longitude', '').strip()
         lat, lon = FARM_LAT, FARM_LON
 
-        if city:
+        if req_lat and req_lon:
+            try:
+                lat, lon = float(req_lat), float(req_lon)
+            except ValueError:
+                pass
+        elif city:
             g_lat, g_lon, _ = get_coordinates(city)
             if g_lat:
                 lat, lon = g_lat, g_lon

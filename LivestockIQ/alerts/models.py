@@ -58,6 +58,8 @@ class Alert(models.Model):
                               related_name='alerts')
     detection = models.ForeignKey(Detection, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='alerts')
+    lameness_detection = models.ForeignKey('health.LamenessDetection', on_delete=models.SET_NULL, null=True, blank=True,
+                                           related_name='alerts')
     
     is_resolved = models.BooleanField(default=False)
     resolved_at = models.DateTimeField(null=True, blank=True)

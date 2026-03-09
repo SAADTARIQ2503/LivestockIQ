@@ -5,6 +5,7 @@ Place at: LivestockIQ/api/v1/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import animals, health, auth, environment, alerts, costs, farms
+from .views.health import LamenessDetectView, LamenessHistoryView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 router = DefaultRouter()
@@ -37,14 +38,14 @@ urlpatterns = [
     # - GET /api/v1/animals/search/
     # - GET /api/v1/animals/statistics/
     # - GET /api/v1/animals/vaccines-by-species/
-    # 
+    
     # - GET/POST /api/v1/health/schedules/
     # - GET/PUT/PATCH/DELETE /api/v1/health/schedules/{id}/
     # - POST /api/v1/health/schedules/{id}/complete/
     # - GET /api/v1/health/schedules/upcoming/
     # - GET /api/v1/health/schedules/overdue/
     # - GET /api/v1/health/schedules/by_animal/
-    # 
+    
     # - GET /api/v1/health/vaccines/
     # - GET /api/v1/health/vaccines/{id}/
     # - GET /api/v1/health/vaccines/by_species/
@@ -70,6 +71,10 @@ urlpatterns = [
     path('ai/detect/',               alerts.DetectDiseaseView.as_view(),    name='ai-detect'),
     path('ai/history/',              alerts.DetectionHistoryView.as_view(), name='detection-history'),
     path('ai/detections/<int:pk>/',  alerts.DetectionDetailView.as_view(), name='detection-detail'),
+
+    # ── Lameness Detection ────────────────────────────────────────────────────
+    path('health/lameness/detect/',  LamenessDetectView.as_view(),  name='lameness-detect'),
+    path('health/lameness/history/', LamenessHistoryView.as_view(), name='lameness-history'),
 
     # ── Costs ─────────────────────────────────────────────────────────────────
     path('costs/transactions/',          costs.TransactionListCreateView.as_view(), name='transaction-list-create'),

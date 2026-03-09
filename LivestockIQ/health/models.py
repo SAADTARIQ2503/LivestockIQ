@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from animals.models import Animal
 
 class VaccinationSchedule(models.Model):
@@ -89,3 +90,34 @@ class VaccineDataset(models.Model):
 
     def __str__(self):
         return f"{self.vaccine_name} ({self.animal_species}) — {self.disease_name}"
+
+
+class LamenessDetection(models.Model):
+    """Stores results from the ViT-LSTM lameness video detection model."""
+
+    RESULT_CHOICES = [('normal', 'Normal'), ('lameness', 'Lameness Detected')]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='lameness_detections',
+    )
+    animal = models.ForeignKey(
+        Animal,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='lameness_detections',
+    )
+    video = models.FileField(upload_to='detections/lameness/')
+    predicted_result = models.CharField(max_length=20, choices=RESULT_CHOICES, default='normal')
+    confidence = models.FloatField(default=0.0)
+    all_probabilities = models.JSONField(null=True, blank=True)
+    processing_time = models.FloatField(null=True, blank=True)
+    frames_sampled = models.IntegerField(default=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Lameness #{self.id} — {self.predicted_result} ({self.confidence:.0%})"
