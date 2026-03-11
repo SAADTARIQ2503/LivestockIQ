@@ -35,6 +35,14 @@ const DISEASE_CONFIG = {
     border: 'border-orange-200',
     icon: AlertTriangle,
   },
+  // Not a cow — model rejects non-cattle images
+  'not_cow': {
+    label: 'Not a Cow',
+    color: 'text-yellow-600',
+    bg: 'bg-yellow-50',
+    border: 'border-yellow-200',
+    icon: AlertTriangle,
+  },
   // ViT-LSTM lameness model
   normal: {
     label: 'Normal Gait',
@@ -239,7 +247,8 @@ export default function AIDetection() {
   const resultConfig = resultDisease ? DISEASE_CONFIG[resultDisease] || DISEASE_CONFIG.healthy : null;
 
   // ── What to show when disease found ──
-  const isUnhealthy = resultDisease && resultDisease !== 'healthy' && resultDisease !== 'normal';
+  const isUnhealthy = resultDisease && resultDisease !== 'healthy' && resultDisease !== 'normal' && resultDisease !== 'not_cow';
+  const isNotCow = resultDisease === 'not_cow';
 
   return (
     <div className="space-y-6">
@@ -454,7 +463,13 @@ export default function AIDetection() {
                         </div>
                       </div>
 
-                      {isUnhealthy ? (
+                      {isNotCow ? (
+                        <div className="mt-4 p-3 bg-white rounded-lg border border-yellow-200">
+                          <p className="text-sm font-medium text-yellow-800">
+                            ⚠️ The uploaded image does not appear to contain a cow. Please upload a clear photo of a cattle animal for accurate disease detection.
+                          </p>
+                        </div>
+                      ) : isUnhealthy ? (
                         <div className="mt-4 p-3 bg-white rounded-lg border border-red-200">
                           <p className="text-sm font-medium text-red-800">
                             ⚠️{' '}

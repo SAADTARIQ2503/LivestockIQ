@@ -27,7 +27,8 @@ export default function DetectionHistory() {
   
   const filteredDetections = detectionsList.filter(d => {
     if (filter === 'healthy') return d.predicted_disease === 'healthy';
-    if (filter === 'diseased') return d.predicted_disease !== 'healthy';
+    if (filter === 'diseased') return d.predicted_disease !== 'healthy' && d.predicted_disease !== 'not_cow';
+    if (filter === 'not_cow') return d.predicted_disease === 'not_cow';
     return true;
   });
 
@@ -44,11 +45,12 @@ export default function DetectionHistory() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {[
           { value: 'all', label: 'All Detections' },
           { value: 'diseased', label: 'Diseased Only' },
           { value: 'healthy', label: 'Healthy Only' },
+          { value: 'not_cow', label: 'Not a Cow' },
         ].map(f => (
           <button
             key={f.value}
@@ -80,7 +82,11 @@ export default function DetectionHistory() {
                 )}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Badge variant={detection.predicted_disease === 'healthy' ? 'success' : 'destructive'}>
+                    <Badge variant={
+                      detection.predicted_disease === 'healthy' ? 'success' :
+                      detection.predicted_disease === 'not_cow' ? 'warning' :
+                      'destructive'
+                    }>
                       {detection.predicted_disease.replace('-', ' ').toUpperCase()}
                     </Badge>
                     <span className="text-sm font-medium">
