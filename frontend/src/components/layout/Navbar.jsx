@@ -1,8 +1,7 @@
-import { Bell, Menu, Moon, Sun, User, LogOut, Settings } from 'lucide-react';
+import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import { useAuth } from '@/hooks/useAuth';
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { animalsAPI } from '@/api/animals';
@@ -15,10 +14,7 @@ import { healthAPI } from '@/api/health';
 export default function Navbar() {
   const { user } = useAuthStore();
   const { theme, toggleTheme, toggleSidebar, toggleMobileMenu } = useUIStore();
-  const { logout } = useAuth();
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const userMenuRef = useRef(null);
   const notificationsRef = useRef(null);
 
   // Fetch live data for notifications
@@ -77,9 +73,6 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
-        setShowUserMenu(false);
-      }
       if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
         setShowNotifications(false);
       }
@@ -187,56 +180,17 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* User Menu */}
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                {user?.first_name?.charAt(0) || user?.username?.charAt(0) || 'U'}
-              </div>
-              <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {user?.first_name} {user?.last_name}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
-              </div>
-            </button>
-
-            {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
-                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {user?.first_name} {user?.last_name}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
-                </div>
-
-                <button
-                  onClick={() => { setShowUserMenu(false); window.location.href = '/profile'; }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
-                >
-                  <User size={16} /> Profile
-                </button>
-
-                <button
-                  onClick={() => { setShowUserMenu(false); window.location.href = '/settings'; }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
-                >
-                  <Settings size={16} /> Settings
-                </button>
-
-                <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-
-                <button
-                  onClick={() => { setShowUserMenu(false); logout(); }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
-                >
-                  <LogOut size={16} /> Logout
-                </button>
-              </div>
-            )}
+          {/* User Info */}
+          <div className="flex items-center gap-2 p-2">
+            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
+              {user?.first_name?.charAt(0) || user?.username?.charAt(0) || 'U'}
+            </div>
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {user?.first_name} {user?.last_name}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
+            </div>
           </div>
 
         </div>
