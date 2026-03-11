@@ -17,3 +17,4 @@ from .health import (
     VaccineDatasetSerializer
 )
 from .farms import FarmSerializer, FarmCreateSerializer
+from .mortality import MortalityRecordSerializer, MortalityRecordCreateSerializer

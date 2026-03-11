@@ -28,6 +28,9 @@ import AlertsList from './pages/alerts/AlertsList';
 import AIDetection from './pages/ai-detection/AIDetection';
 import DetectionHistory from './pages/ai-detection/DetectionHistory';
 
+import MortalityTracker from './pages/mortality/MortalityTracker';
+import AddMortality from './pages/mortality/AddMortality';
+
 // New pages
 import FarmsList from './pages/farms/FarmsList';
 import AddFarm from './pages/farms/AddFarm';
@@ -89,6 +92,10 @@ function App() {
             {/* AI Detection */}
             <Route path="ai-detection"         element={<AIDetection />} />
             <Route path="ai-detection/history" element={<DetectionHistory />} />
+
+            {/* Mortality */}
+            <Route path="mortality"     element={<MortalityTracker />} />
+            <Route path="mortality/add" element={<AddMortality />} />
 
             {/* Profile */}
             <Route path="profile" element={<Profile />} />

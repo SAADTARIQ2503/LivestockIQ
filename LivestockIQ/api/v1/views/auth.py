@@ -178,11 +178,11 @@ def dashboard_stats_view(request):
     Get dashboard statistics for the current user
     GET /api/v1/auth/dashboard/
     """
-    from animals.models import Animal
+    from animals.models import Animal, MortalityRecord
     from health.models import VaccinationSchedule
     from django.db.models import Count, Q
-    from datetime import datetime, timedelta
-    
+    from datetime import datetime, timedelta, date as date_obj
+
     user = request.user
     
     # Animal statistics
@@ -213,7 +213,16 @@ def dashboard_stats_view(request):
     animals_by_type = Animal.objects.filter(user=user).values('animal_type').annotate(
         count=Count('id')
     )
-    
+
+    # Mortality statistics
+    today_date = date_obj.today()
+    this_month_start = today_date.replace(day=1)
+    total_deaths = MortalityRecord.objects.filter(farm__user=user).count()
+    deaths_this_month = MortalityRecord.objects.filter(
+        farm__user=user,
+        date_of_death__gte=this_month_start
+    ).count()
+
     return Response({
         'animals': {
             'total': total_animals,
@@ -235,5 +244,9 @@ def dashboard_stats_view(request):
                 0  # You can calculate overdue based on dates
             ],
             'colors': ["#28a745", '#ffc107', '#dc3545']
-        }
+        },
+        'mortality': {
+            'total': total_deaths,
+            'this_month': deaths_this_month,
+        },
     })

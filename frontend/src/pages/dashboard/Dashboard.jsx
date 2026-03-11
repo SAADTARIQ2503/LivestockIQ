@@ -3,7 +3,7 @@ import { QUERY_KEYS } from '@/utils/constants';
 import { authAPI } from '@/api/auth';
 import StatCard from '@/components/shared/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Beef, Heart, AlertTriangle, Syringe } from 'lucide-react';
+import { Beef, Heart, AlertTriangle, Syringe, Skull } from 'lucide-react';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import { useUIStore } from '@/store/uiStore';
 import { useNavigate } from 'react-router-dom';
@@ -157,7 +157,7 @@ export default function Dashboard() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard
           title="Total Animals"
           value={dashboardData?.animals?.total || 0}
@@ -181,6 +181,13 @@ export default function Dashboard() {
           value={dashboardData?.vaccinations?.upcoming || 0}
           icon={Syringe}
           color="yellow"
+        />
+        <StatCard
+          title="Deaths This Month"
+          value={dashboardData?.mortality?.this_month || 0}
+          icon={Skull}
+          color="red"
+          onClick={() => navigate('/mortality')}
         />
       </div>
 
@@ -246,7 +253,7 @@ export default function Dashboard() {
           <CardTitle className="text-gray-900 dark:text-white">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <button
               onClick={() => navigate('/animals/add')}
               className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
@@ -272,6 +279,15 @@ export default function Dashboard() {
               <AlertTriangle className="text-primary mb-2" size={24} />
               <h3 className="font-semibold text-gray-900 dark:text-white">Check Environment</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">View weather and conditions</p>
+            </button>
+
+            <button
+              onClick={() => navigate('/mortality/add')}
+              className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
+            >
+              <Skull className="text-red-500 mb-2" size={24} />
+              <h3 className="font-semibold text-gray-900 dark:text-white">Log Death</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Record an animal mortality</p>
             </button>
           </div>
         </CardContent>
