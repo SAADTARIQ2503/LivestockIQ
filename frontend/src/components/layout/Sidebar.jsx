@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Beef, Syringe, Cloud, Bell,
-  Calculator, X, Tractor, User, LogOut, Scan,
+  Calculator, X, Tractor, User, LogOut, Scan, Skull,
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/utils/cn';
@@ -60,6 +60,7 @@ export default function Sidebar() {
     { title: 'Environment',     icon: Cloud,           path: '/environment',  badge: null },
     { title: 'AI Detection',    icon: Scan,            path: '/ai-detection', badge: null },
     { title: 'Alerts',          icon: Bell,            path: '/alerts',       badge: overdueCount > 0 ? overdueCount : null, badgeColor: 'bg-red-500 text-white' },
+    { title: 'Mortality',       icon: Skull,           path: '/mortality',    badge: null },
     { title: 'Cost Calculator', icon: Calculator,      path: '/costs',        badge: null },
   ];
 

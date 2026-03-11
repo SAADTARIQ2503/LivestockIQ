@@ -4,7 +4,7 @@ Place at: LivestockIQ/api/v1/urls.py
 """
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import animals, health, auth, environment, alerts, costs, farms
+from .views import animals, health, auth, environment, alerts, costs, farms, mortality
 from .views.health import LamenessDetectView, LamenessHistoryView
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -82,4 +82,9 @@ urlpatterns = [
     path('costs/summary/',               costs.SummaryView.as_view(),               name='costs-summary'),
     path('costs/report/',                costs.ReportView.as_view(),                name='costs-report'),
     path('costs/breakdown/',             costs.CategoryBreakdownView.as_view(),     name='costs-breakdown'),
+
+    # ── Mortality ─────────────────────────────────────────────────────────────
+    path('mortality/',             mortality.MortalityListCreateView.as_view(), name='mortality-list-create'),
+    path('mortality/<int:pk>/',    mortality.MortalityDetailView.as_view(),     name='mortality-detail'),
+    path('mortality/summary/',     mortality.MortalitySummaryView.as_view(),    name='mortality-summary'),
 ]
