@@ -6,3 +6,4 @@ LivestockIQ/media/models/*.pth
 model_vit.pth
 LivestockIQ/media/detections
 __pycache__/
+/__pycache__
