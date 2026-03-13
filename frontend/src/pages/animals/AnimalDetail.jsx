@@ -1,15 +1,18 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAnimal, useAnimals } from '@/hooks/useAnimals';
 import { useVaccinations } from '@/hooks/useVaccinations';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowLeft, Edit, Trash2, Beef, Calendar, Syringe, 
-  MapPin, CheckCircle, Clock, AlertCircle 
+import {
+  ArrowLeft, Edit, Trash2, Beef, Calendar, Syringe,
+  MapPin, CheckCircle, Clock, AlertCircle, Skull, X
 } from 'lucide-react';
 import { formatDate } from '@/utils/formatters';
+import { mortalityAPI } from '@/api/mortality';
+import { useNotificationStore } from '@/store/notificationStore';
 
 /**
  * Animal Detail Page
@@ -22,6 +25,44 @@ export default function AnimalDetail() {
   const { animal, isLoading } = useAnimal(id);
   const { deleteAnimal, isDeleting } = useAnimals();
   const { markCompleted, isMarkingCompleted } = useVaccinations();
+  const { addNotification } = useNotificationStore();
+
+  const [showDeadModal, setShowDeadModal] = useState(false);
+  const [deadForm, setDeadForm] = useState({
+    cause_of_death: '',
+    date_of_death: new Date().toISOString().split('T')[0],
+    animal_tag: '',
+    weight_at_death: '',
+    notes: '',
+  });
+
+  const markDeadMutation = useMutation({
+    mutationFn: mortalityAPI.create,
+    onSuccess: () => {
+      addNotification({ type: 'success', message: 'Mortality record saved.' });
+      deleteAnimal(parseInt(id), { onSuccess: () => navigate('/animals') });
+    },
+    onError: (err) => {
+      addNotification({ type: 'error', message: err.response?.data?.detail || 'Failed to save record.' });
+    },
+  });
+
+  const handleMarkDead = (e) => {
+    e.preventDefault();
+    if (!animal) return;
+    const payload = {
+      farm: animal.farm,
+      animal: animal.id,
+      animal_type: animal.animal_type,
+      animal_tag: deadForm.animal_tag || null,
+      cause_of_death: deadForm.cause_of_death,
+      date_of_death: deadForm.date_of_death,
+      age_at_death: `${animal.age} months`,
+      weight_at_death: deadForm.weight_at_death || null,
+      notes: deadForm.notes || null,
+    };
+    markDeadMutation.mutate(payload);
+  };
 
   const handleMarkComplete = (scheduleId) => {
     if (window.confirm('Mark this vaccination as completed?')) {
@@ -119,6 +160,14 @@ export default function AnimalDetail() {
           >
             <Edit size={16} className="mr-2" />
             Edit
+          </Button>
+          <Button
+            variant="outline"
+            className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+            onClick={() => setShowDeadModal(true)}
+          >
+            <Skull size={16} className="mr-2" />
+            Mark as Dead
           </Button>
           <Button
             variant="destructive"
@@ -444,7 +493,7 @@ export default function AnimalDetail() {
               <Edit size={16} className="mr-2" />
               Edit Information
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={() => navigate('/vaccinations/schedule')}
@@ -453,7 +502,7 @@ export default function AnimalDetail() {
               <Syringe size={16} className="mr-2" />
               Schedule Vaccination
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={() => navigate('/animals')}
@@ -465,6 +514,109 @@ export default function AnimalDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mark as Dead Modal */}
+      {showDeadModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <Skull size={20} className="text-red-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Mark Animal as Dead</h2>
+              </div>
+              <button onClick={() => setShowDeadModal(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                <X size={18} className="text-gray-500" />
+              </button>
+            </div>
+
+            <form onSubmit={handleMarkDead} className="p-5 space-y-4">
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-700 dark:text-red-400">
+                This will log a mortality record for <strong>{animal?.animal_type} #{animal?.id}</strong> and remove it from your animals list.
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cause of Death *</label>
+                <select
+                  required
+                  value={deadForm.cause_of_death}
+                  onChange={e => setDeadForm(p => ({ ...p, cause_of_death: e.target.value }))}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Select cause</option>
+                  <option value="disease">Disease</option>
+                  <option value="accident">Accident</option>
+                  <option value="natural">Natural Causes</option>
+                  <option value="predator">Predator Attack</option>
+                  <option value="unknown">Unknown</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Death *</label>
+                <input
+                  type="date"
+                  required
+                  value={deadForm.date_of_death}
+                  onChange={e => setDeadForm(p => ({ ...p, date_of_death: e.target.value }))}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tag / Name</label>
+                  <input
+                    value={deadForm.animal_tag}
+                    onChange={e => setDeadForm(p => ({ ...p, animal_tag: e.target.value }))}
+                    placeholder="Optional"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Weight (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={deadForm.weight_at_death}
+                    onChange={e => setDeadForm(p => ({ ...p, weight_at_death: e.target.value }))}
+                    placeholder="Optional"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                <textarea
+                  rows={2}
+                  value={deadForm.notes}
+                  onChange={e => setDeadForm(p => ({ ...p, notes: e.target.value }))}
+                  placeholder="Any additional observations..."
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowDeadModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={markDeadMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  {markDeadMutation.isPending ? 'Saving...' : 'Confirm Death'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

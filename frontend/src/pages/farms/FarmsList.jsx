@@ -91,15 +91,15 @@ export default function FarmsList() {
 
                   {/* Weather snippet */}
                   {weather && !weather.error && (
-                    <div className="p-3 bg-gray-50 rounded-lg space-y-1">
+                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {weather.weather_icon && (
                             <img src={`https://openweathermap.org/img/wn/${weather.weather_icon}.png`} alt="" className="w-8 h-8" />
                           )}
                           <div>
-                            <p className="text-sm font-semibold">{weather.temperature}°C</p>
-                            <p className="text-xs text-gray-500">{weather.weather_description}</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{weather.temperature}°C</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{weather.weather_description}</p>
                           </div>
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[weather.status] || STATUS_STYLES.optimal}`}>
