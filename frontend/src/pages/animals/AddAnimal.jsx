@@ -44,7 +44,7 @@ export default function AddAnimal() {
       setVaccineSearch('');
       try {
         const res = await healthAPI.getVaccinesBySpecies(formData.animal_type);
-        const names = res?.data?.vaccines || [];
+        const names = (res?.data?.results || []).map(v => v.vaccine_name);
         setVaccines(names);
       } catch (err) {
         console.error('Failed to load vaccines:', err);
