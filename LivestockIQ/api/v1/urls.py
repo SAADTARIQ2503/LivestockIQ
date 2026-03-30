@@ -62,10 +62,18 @@ urlpatterns = [
     path('environment/farms-weather/', farms.FarmsWeatherView.as_view(),          name='farms-weather'),
 
     # ── Alerts ────────────────────────────────────────────────────────────────
-    path('alerts/',               alerts.AlertListCreateView.as_view(),  name='alert-list-create'),
-    path('alerts/<int:pk>/',      alerts.AlertDetailView.as_view(),      name='alert-detail'),
-    path('alerts/<int:pk>/resolve/', alerts.ResolveAlertView.as_view(), name='resolve-alert'),
-    path('alerts/active/',        alerts.ActiveAlertsView.as_view(),     name='active-alerts'),
+    path('alerts/',                  alerts.AlertListCreateView.as_view(),  name='alert-list-create'),
+    path('alerts/<int:pk>/',         alerts.AlertDetailView.as_view(),      name='alert-detail'),
+    path('alerts/<int:pk>/resolve/', alerts.ResolveAlertView.as_view(),     name='resolve-alert'),
+    path('alerts/active/',           alerts.ActiveAlertsView.as_view(),     name='active-alerts'),
+
+    # Specialized alert feeds
+    path('alerts/environmental/',                  alerts.EnvironmentalAlertListView.as_view(),    name='environmental-alerts'),
+    path('alerts/environmental/<int:pk>/resolve/', alerts.ResolveEnvironmentalAlertView.as_view(), name='resolve-environmental-alert'),
+    path('alerts/vaccination/',                    alerts.VaccinationAlertListView.as_view(),      name='vaccination-alerts'),
+    path('alerts/vaccination/<int:pk>/resolve/',   alerts.ResolveVaccinationAlertView.as_view(),   name='resolve-vaccination-alert'),
+    path('alerts/health/',                         alerts.HealthAlertListView.as_view(),           name='health-alerts'),
+    path('alerts/health/<int:pk>/resolve/',        alerts.ResolveHealthAlertView.as_view(),        name='resolve-health-alert'),
 
     # ── AI Detection ──────────────────────────────────────────────────────────
     path('ai/detect/',               alerts.DetectDiseaseView.as_view(),    name='ai-detect'),

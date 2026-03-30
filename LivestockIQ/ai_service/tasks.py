@@ -1,6 +1,6 @@
 from celery import shared_task
 from django.conf import settings
-from alerts.models import Detection, Alert
+from alerts.models import Detection, Alert, HealthAlert
 from ai_service.disease_detector import DiseaseDetector
 import os
 
@@ -38,18 +38,32 @@ def detect_disease_task(detection_id):
         detection.processing_time = result['processing_time']
         detection.save()
         
-        # Create alert if disease detected
+        # Create alerts if disease detected
         if result['disease'] != 'healthy' and result['confidence'] > 0.7:
             severity = 'critical' if result['confidence'] > 0.9 else 'warning'
-            
+            title   = f"{result['disease'].replace('-', ' ').title()} Detected"
+            message = f"AI detected {result['disease']} with {result['confidence']*100:.1f}% confidence. Immediate attention recommended."
+
             Alert.objects.create(
                 user=detection.user,
-                title=f"{result['disease'].replace('-', ' ').title()} Detected",
-                message=f"AI detected {result['disease']} with {result['confidence']*100:.1f}% confidence. Immediate attention recommended.",
+                title=title,
+                message=message,
                 severity=severity,
                 animal=detection.animal,
-                detection=detection
+                detection=detection,
             )
+
+            health_alert = HealthAlert.objects.create(
+                user=detection.user,
+                title=title,
+                message=message,
+                severity=severity,
+                animal=detection.animal,
+                detection=detection,
+                alert_type='disease',
+            )
+            health_alert.send_email_notification()
+            health_alert.ping_system()
         
         return {
             'success': True,

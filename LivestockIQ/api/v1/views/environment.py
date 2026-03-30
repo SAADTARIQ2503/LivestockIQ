@@ -335,9 +335,58 @@ class EnvironmentAlertsView(APIView):
         temp       = data['main']['temp']
         humidity   = data['main']['humidity']
         wind_speed = data['wind']['speed']
+        wind_kmh   = wind_speed * 3.6
         alerts     = build_alerts(temp, humidity, wind_speed)
 
+        # Persist EnvironmentalAlerts for any triggered conditions
+        self._persist_environmental_alerts(request.user, alerts, temp, humidity, wind_kmh, lat, lon)
+
         return Response(alerts)
+
+    def _persist_environmental_alerts(self, user, alert_dicts, temp, humidity, wind_kmh, lat, lon):
+        """
+        For each triggered weather condition, create an EnvironmentalAlert if no
+        unresolved alert of the same condition type exists within the last 6 hours.
+        Sends email + pings system for each newly created alert.
+        """
+        from alerts.models import EnvironmentalAlert
+        from django.utils import timezone
+        from datetime import timedelta
+
+        CONDITION_MAP = {
+            'Heat Stress Risk':    'heat_stress',
+            'Cold Stress Risk':    'cold_stress',
+            'High Humidity Alert': 'high_humidity',
+            'Strong Winds':        'strong_wind',
+        }
+        location = f"{lat:.4f}, {lon:.4f}"
+        cutoff   = timezone.now() - timedelta(hours=6)
+
+        for a in alert_dicts:
+            cond_type = CONDITION_MAP.get(a['title'])
+            if not cond_type:
+                continue
+            if EnvironmentalAlert.objects.filter(
+                user=user,
+                condition_type=cond_type,
+                is_resolved=False,
+                created_at__gte=cutoff,
+            ).exists():
+                continue
+
+            env_alert = EnvironmentalAlert.objects.create(
+                user=user,
+                title=a['title'],
+                message=a['message'],
+                severity=a['severity'],
+                condition_type=cond_type,
+                temperature=temp,
+                humidity=humidity,
+                wind_speed=wind_kmh,
+                location=location,
+            )
+            env_alert.send_email_notification()
+            env_alert.ping_system()
     
     
 # ─── URL routing aliases ──────────────────────────────────────────────────────

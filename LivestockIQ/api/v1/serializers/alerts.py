@@ -3,8 +3,7 @@
 Alerts/Anomaly Detection Serializers
 """
 from rest_framework import serializers
-from rest_framework import serializers
-from alerts.models import Alert, Detection
+from alerts.models import Alert, Detection, EnvironmentalAlert, VaccinationAlert, HealthAlert
 
 
 class AnomalySerializer(serializers.Serializer):
@@ -95,3 +94,42 @@ class AlertSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'resolved_at']
+
+
+class EnvironmentalAlertSerializer(serializers.ModelSerializer):
+    """Serializer for EnvironmentalAlert model"""
+
+    class Meta:
+        model = EnvironmentalAlert
+        fields = [
+            'id', 'title', 'message', 'severity',
+            'condition_type', 'temperature', 'humidity', 'wind_speed', 'location',
+            'is_resolved', 'resolved_at', 'email_sent', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'resolved_at', 'email_sent']
+
+
+class VaccinationAlertSerializer(serializers.ModelSerializer):
+    """Serializer for VaccinationAlert model"""
+
+    class Meta:
+        model = VaccinationAlert
+        fields = [
+            'id', 'title', 'message', 'severity',
+            'schedule', 'alert_type', 'days_until_due',
+            'is_resolved', 'resolved_at', 'email_sent', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'resolved_at', 'email_sent']
+
+
+class HealthAlertSerializer(serializers.ModelSerializer):
+    """Serializer for HealthAlert model"""
+
+    class Meta:
+        model = HealthAlert
+        fields = [
+            'id', 'title', 'message', 'severity',
+            'alert_type', 'animal', 'detection', 'lameness_detection',
+            'is_resolved', 'resolved_at', 'email_sent', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'resolved_at', 'email_sent']

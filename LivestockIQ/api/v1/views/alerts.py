@@ -4,8 +4,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.conf import settings
-from alerts.models import Alert, Detection
-from api.v1.serializers.alerts import AlertSerializer, DetectionSerializer
+from alerts.models import Alert, Detection, EnvironmentalAlert, VaccinationAlert, HealthAlert
+from api.v1.serializers.alerts import (
+    AlertSerializer, DetectionSerializer,
+    EnvironmentalAlertSerializer, VaccinationAlertSerializer, HealthAlertSerializer,
+)
 from ai_service.disease_detector import DiseaseDetector
 from ai_service.tasks import detect_disease_task
 import os
@@ -152,18 +155,34 @@ class DetectDiseaseView(APIView):
                 detection.processing_time = result['processing_time']
                 detection.save()
                 
-                # Create alert if disease detected
+                # Create alerts if disease detected
                 if result['disease'] != 'healthy' and result['confidence'] > 0.7:
                     severity = 'critical' if result['confidence'] > 0.9 else 'warning'
-                    
+                    title   = f"{result['disease'].replace('-', ' ').title()} Detected"
+                    message = f"AI detected {result['disease']} with {result['confidence']*100:.1f}% confidence."
+
+                    # Generic system alert (in-app feed)
                     Alert.objects.create(
                         user=request.user,
-                        title=f"{result['disease'].replace('-', ' ').title()} Detected",
-                        message=f"AI detected {result['disease']} with {result['confidence']*100:.1f}% confidence.",
+                        title=title,
+                        message=message,
                         severity=severity,
                         animal_id=animal_id if animal_id else None,
-                        detection=detection
+                        detection=detection,
                     )
+
+                    # Specialized HealthAlert — sends email + pings system
+                    health_alert = HealthAlert.objects.create(
+                        user=request.user,
+                        title=title,
+                        message=message,
+                        severity=severity,
+                        animal_id=animal_id if animal_id else None,
+                        detection=detection,
+                        alert_type='disease',
+                    )
+                    health_alert.send_email_notification()
+                    health_alert.ping_system()
                 
                 return Response({
                     'detection_id': detection.id,
@@ -190,6 +209,104 @@ class DetectionDetailView(generics.RetrieveAPIView):
     """Get single detection"""
     serializer_class = DetectionSerializer
     permission_classes = [IsAuthenticated]
-    
+
     def get_queryset(self):
         return Detection.objects.filter(user=self.request.user)
+
+
+# ─── Specialized alert list & resolve views ───────────────────────────────────
+
+class EnvironmentalAlertListView(generics.ListAPIView):
+    """GET /alerts/environmental/ — list environment/weather alerts"""
+    serializer_class = EnvironmentalAlertSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = EnvironmentalAlert.objects.filter(user=self.request.user)
+        status_filter = self.request.query_params.get('status')
+        if status_filter == 'active':
+            qs = qs.filter(is_resolved=False)
+        elif status_filter == 'resolved':
+            qs = qs.filter(is_resolved=True)
+        severity = self.request.query_params.get('severity')
+        if severity:
+            qs = qs.filter(severity=severity)
+        return qs
+
+
+class ResolveEnvironmentalAlertView(APIView):
+    """PATCH /alerts/environmental/<pk>/resolve/"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            alert = EnvironmentalAlert.objects.get(pk=pk, user=request.user)
+            alert.resolve()
+            return Response({'message': 'Alert resolved', 'alert': EnvironmentalAlertSerializer(alert).data})
+        except EnvironmentalAlert.DoesNotExist:
+            return Response({'error': 'Alert not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class VaccinationAlertListView(generics.ListAPIView):
+    """GET /alerts/vaccination/ — list vaccination schedule alerts"""
+    serializer_class = VaccinationAlertSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = VaccinationAlert.objects.filter(user=self.request.user)
+        status_filter = self.request.query_params.get('status')
+        if status_filter == 'active':
+            qs = qs.filter(is_resolved=False)
+        elif status_filter == 'resolved':
+            qs = qs.filter(is_resolved=True)
+        alert_type = self.request.query_params.get('type')
+        if alert_type:
+            qs = qs.filter(alert_type=alert_type)
+        return qs
+
+
+class ResolveVaccinationAlertView(APIView):
+    """PATCH /alerts/vaccination/<pk>/resolve/"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            alert = VaccinationAlert.objects.get(pk=pk, user=request.user)
+            alert.resolve()
+            return Response({'message': 'Alert resolved', 'alert': VaccinationAlertSerializer(alert).data})
+        except VaccinationAlert.DoesNotExist:
+            return Response({'error': 'Alert not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class HealthAlertListView(generics.ListAPIView):
+    """GET /alerts/health/ — list disease & lameness detection alerts"""
+    serializer_class = HealthAlertSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = HealthAlert.objects.filter(user=self.request.user)
+        status_filter = self.request.query_params.get('status')
+        if status_filter == 'active':
+            qs = qs.filter(is_resolved=False)
+        elif status_filter == 'resolved':
+            qs = qs.filter(is_resolved=True)
+        alert_type = self.request.query_params.get('type')
+        if alert_type:
+            qs = qs.filter(alert_type=alert_type)
+        severity = self.request.query_params.get('severity')
+        if severity:
+            qs = qs.filter(severity=severity)
+        return qs
+
+
+class ResolveHealthAlertView(APIView):
+    """PATCH /alerts/health/<pk>/resolve/"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            alert = HealthAlert.objects.get(pk=pk, user=request.user)
+            alert.resolve()
+            return Response({'message': 'Alert resolved', 'alert': HealthAlertSerializer(alert).data})
+        except HealthAlert.DoesNotExist:
+            return Response({'error': 'Alert not found'}, status=status.HTTP_404_NOT_FOUND)

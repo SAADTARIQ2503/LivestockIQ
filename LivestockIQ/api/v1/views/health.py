@@ -238,7 +238,7 @@ class LamenessDetectView(APIView):
 
     def post(self, request):
         from ai_service.lameness_detector import LamenessDetector
-        from alerts.models import Alert
+        from alerts.models import Alert, HealthAlert
 
         video = request.FILES.get('file')
         animal_id = request.data.get('animal_id')
@@ -281,17 +281,32 @@ class LamenessDetectView(APIView):
         detection.frames_sampled = result['frames_sampled']
         detection.save()
 
-        # Auto-create alert if lameness detected with high confidence
+        # Auto-create alerts if lameness detected with high confidence
         if result['disease'] == 'lameness' and result['confidence'] > 0.70:
             severity = 'critical' if result['confidence'] > 0.90 else 'warning'
+            title   = 'Lameness Detected'
+            message = f"ViT-LSTM detected lameness with {result['confidence']*100:.1f}% confidence."
+
             Alert.objects.create(
                 user=request.user,
-                title='Lameness Detected',
-                message=f"ViT-LSTM detected lameness with {result['confidence']*100:.1f}% confidence.",
+                title=title,
+                message=message,
                 severity=severity,
                 animal_id=animal_id if animal_id else None,
                 lameness_detection=detection,
             )
+
+            health_alert = HealthAlert.objects.create(
+                user=request.user,
+                title=title,
+                message=message,
+                severity=severity,
+                animal_id=animal_id if animal_id else None,
+                lameness_detection=detection,
+                alert_type='lameness',
+            )
+            health_alert.send_email_notification()
+            health_alert.ping_system()
 
         return Response({
             'detection_id': detection.id,

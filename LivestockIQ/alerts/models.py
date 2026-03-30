@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings as django_settings
 from animals.models import Animal
 
 
@@ -74,3 +77,165 @@ class Alert(models.Model):
     
     def __str__(self):
         return f"{self.severity.upper()}: {self.title}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Specialized alert hierarchy
+# ─────────────────────────────────────────────────────────────────────────────
+
+class BaseAlert(models.Model):
+    """
+    Abstract base class for all specialized alert types.
+    Provides common fields plus email notification and system-ping helpers.
+    Inheriting models: EnvironmentalAlert, VaccinationAlert, HealthAlert.
+    """
+    SEVERITY_CHOICES = [
+        ('critical', 'Critical'),
+        ('warning',  'Warning'),
+        ('info',     'Info'),
+    ]
+
+    user       = models.ForeignKey(User, on_delete=models.CASCADE)
+    title      = models.CharField(max_length=255)
+    message    = models.TextField()
+    severity   = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='info')
+    is_resolved = models.BooleanField(default=False)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    email_sent  = models.BooleanField(default=False)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+        ordering = ['-created_at']
+
+    def send_email_notification(self):
+        """
+        Send an email alert.
+        If EMAIL_TEST_RECIPIENT is set in settings, all emails go there
+        instead of the real user address (useful during development/testing).
+        """
+        if not self.user.email:
+            return False
+
+        test_recipient = getattr(django_settings, 'EMAIL_TEST_RECIPIENT', None)
+        recipient = test_recipient if test_recipient else self.user.email
+
+        subject = f"[LivestockIQ] {self.severity.upper()}: {self.title}"
+        body = (
+            f"{self.message}\n\n"
+            f"---\n"
+            f"Severity : {self.severity.upper()}\n"
+            f"Created  : {self.created_at}\n"
+            + (f"Original recipient: {self.user.email}\n" if test_recipient else "")
+            + f"\nThis is an automated alert from LivestockIQ.\n"
+            f"Log in to your dashboard to take action."
+        )
+
+        try:
+            send_mail(
+                subject=subject,
+                message=body,
+                from_email=django_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[recipient],
+                fail_silently=False,
+            )
+            self.email_sent = True
+            self.save(update_fields=['email_sent'])
+            return True
+        except Exception:
+            return False
+
+    def ping_system(self):
+        """
+        Create a generic Alert entry so this alert surfaces in the main
+        in-app alert feed (polled by the frontend every 30-60 s).
+        Only creates a new entry if no active alert with this title exists.
+        """
+        if not Alert.objects.filter(
+            user=self.user,
+            title=self.title,
+            is_resolved=False,
+        ).exists():
+            Alert.objects.create(
+                user=self.user,
+                title=self.title,
+                message=self.message,
+                severity=self.severity,
+            )
+
+    def resolve(self):
+        """Mark this alert as resolved with a timestamp."""
+        self.is_resolved = True
+        self.resolved_at = timezone.now()
+        self.save(update_fields=['is_resolved', 'resolved_at'])
+
+
+class EnvironmentalAlert(BaseAlert):
+    """Persisted weather/environment alert generated from OpenWeatherMap data."""
+    CONDITION_CHOICES = [
+        ('heat_stress',   'Heat Stress'),
+        ('cold_stress',   'Cold Stress'),
+        ('high_humidity', 'High Humidity'),
+        ('strong_wind',   'Strong Wind'),
+    ]
+
+    condition_type = models.CharField(max_length=20, choices=CONDITION_CHOICES)
+    temperature    = models.FloatField(null=True, blank=True)
+    humidity       = models.FloatField(null=True, blank=True)
+    wind_speed     = models.FloatField(null=True, blank=True)
+    location       = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Environmental Alert'
+        verbose_name_plural = 'Environmental Alerts'
+
+    def __str__(self):
+        return f"ENV [{self.severity.upper()}]: {self.title}"
+
+
+class VaccinationAlert(BaseAlert):
+    """Alert for an upcoming or overdue vaccination schedule."""
+    ALERT_TYPE_CHOICES = [
+        ('upcoming',  'Upcoming'),
+        ('due_today', 'Due Today'),
+        ('overdue',   'Overdue'),
+    ]
+
+    schedule       = models.ForeignKey('health.VaccinationSchedule', on_delete=models.CASCADE,
+                                       related_name='vaccination_alerts')
+    alert_type     = models.CharField(max_length=20, choices=ALERT_TYPE_CHOICES)
+    days_until_due = models.IntegerField(default=0)   # negative value means N days overdue
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Vaccination Alert'
+        verbose_name_plural = 'Vaccination Alerts'
+
+    def __str__(self):
+        return f"VAX [{self.severity.upper()}]: {self.title}"
+
+
+class HealthAlert(BaseAlert):
+    """Alert raised by AI disease detection or lameness detection."""
+    ALERT_TYPE_CHOICES = [
+        ('disease',  'Disease Detection'),
+        ('lameness', 'Lameness Detection'),
+    ]
+
+    animal             = models.ForeignKey(Animal, on_delete=models.SET_NULL,
+                                           null=True, blank=True, related_name='health_alerts')
+    detection          = models.ForeignKey(Detection, on_delete=models.SET_NULL,
+                                           null=True, blank=True, related_name='health_alerts')
+    lameness_detection = models.ForeignKey('health.LamenessDetection', on_delete=models.SET_NULL,
+                                           null=True, blank=True, related_name='health_alerts')
+    alert_type         = models.CharField(max_length=20, choices=ALERT_TYPE_CHOICES, default='disease')
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Health Alert'
+        verbose_name_plural = 'Health Alerts'
+
+    def __str__(self):
+        return f"HEALTH [{self.severity.upper()}]: {self.title}"

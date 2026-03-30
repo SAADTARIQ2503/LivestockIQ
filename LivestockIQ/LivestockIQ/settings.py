@@ -263,6 +263,38 @@ CELERY_TIMEZONE = 'UTC'
 USE_CELERY = False  # Change to True when Redis is running
 # USE_CELERY = True  # Change to True when Redis is running
 
+# Celery Beat — periodic alert tasks
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # Runs daily at 08:00 UTC — checks overdue & upcoming vaccinations
+    'check-vaccination-schedules-daily': {
+        'task': 'alerts.tasks.check_vaccination_schedules',
+        'schedule': crontab(hour=8, minute=0),
+    },
+    # Runs every hour — checks farm weather for extreme conditions
+    'check-environmental-conditions-hourly': {
+        'task': 'alerts.tasks.check_environmental_conditions',
+        'schedule': crontab(minute=0),
+    },
+}
+
+# ==============================================================================
+# EMAIL CONFIGURATION
+# ==============================================================================
+# Default: console backend (prints to terminal). Switch to smtp for production.
+# Set EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend in .env
+EMAIL_BACKEND      = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST         = os.environ.get('EMAIL_HOST',         'smtp.gmail.com')
+EMAIL_PORT         = int(os.environ.get('EMAIL_PORT',     '587'))
+EMAIL_USE_TLS      = os.environ.get('EMAIL_USE_TLS',      'True') == 'True'
+EMAIL_HOST_USER    = os.environ.get('EMAIL_HOST_USER',    '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'LivestockIQ <noreply@livestockiq.com>')
+# When set, ALL alert emails are redirected here instead of the real user address.
+# Clear this variable in production.
+EMAIL_TEST_RECIPIENT = os.environ.get('EMAIL_TEST_RECIPIENT', '')
+
 # Media files configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
