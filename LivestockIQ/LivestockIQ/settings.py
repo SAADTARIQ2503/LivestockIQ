@@ -277,7 +277,26 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'alerts.tasks.check_environmental_conditions',
         'schedule': crontab(minute=0),
     },
+    # Runs every 15 minutes — scans input folders for disease/lameness detection
+    'auto-scan-folders': {
+        'task': 'alerts.tasks.auto_scan_folders',
+        'schedule': crontab(minute='*/15'),
+    },
 }
+
+# ==============================================================================
+# AUTO-SCAN SETTINGS
+# ==============================================================================
+# Root folder for the background detection scanner.
+# Expected layout:
+#   AUTO_SCAN_INPUT_IMAGES  → drop images here to scan for disease
+#   AUTO_SCAN_INPUT_VIDEOS  → drop videos here to scan for lameness
+#   AUTO_SCAN_OUTPUT_DIR    → detected files are copied here (dated sub-folders)
+AUTO_SCAN_INPUT_IMAGES       = os.path.join(BASE_DIR, 'auto_scan', 'input', 'images')
+AUTO_SCAN_INPUT_VIDEOS       = os.path.join(BASE_DIR, 'auto_scan', 'input', 'videos')
+AUTO_SCAN_OUTPUT_DIR         = os.path.join(BASE_DIR, 'auto_scan', 'output', 'detected')
+AUTO_SCAN_DISEASE_THRESHOLD  = float(os.environ.get('AUTO_SCAN_DISEASE_THRESHOLD',  '0.60'))
+AUTO_SCAN_LAMENESS_THRESHOLD = float(os.environ.get('AUTO_SCAN_LAMENESS_THRESHOLD', '0.60'))
 
 # ==============================================================================
 # EMAIL CONFIGURATION

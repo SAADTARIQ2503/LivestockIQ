@@ -132,7 +132,9 @@ export const QUERY_KEYS = {
   },
   alerts: {
     all: (filters) => ['alerts', filters],
+    list: (filters) => ['alerts', 'list', filters],
     detail: (id) => ['alerts', 'detail', id],
+    active: ['alerts', 'active'],
     statistics: ['alerts', 'statistics'],
     unacknowledged: ['alerts', 'unacknowledged'],
   },

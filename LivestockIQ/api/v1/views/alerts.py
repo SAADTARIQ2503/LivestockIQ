@@ -310,3 +310,107 @@ class ResolveHealthAlertView(APIView):
             return Response({'message': 'Alert resolved', 'alert': HealthAlertSerializer(alert).data})
         except HealthAlert.DoesNotExist:
             return Response({'error': 'Alert not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# ─── Auto-scan views ──────────────────────────────────────────────────────────
+
+class AutoScanTriggerView(APIView):
+    """
+    POST /api/v1/ai/auto-scan/trigger/
+    Manually kick off the auto_scan_folders task.
+    Staff only — regular users should wait for the periodic beat schedule.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.is_staff:
+            return Response({'error': 'Staff access required'}, status=status.HTTP_403_FORBIDDEN)
+
+        use_celery = getattr(settings, 'USE_CELERY', False)
+        if use_celery:
+            from alerts.tasks import auto_scan_folders
+            task = auto_scan_folders.delay()
+            return Response({'message': 'Auto-scan task queued', 'task_id': task.id},
+                            status=status.HTTP_202_ACCEPTED)
+        else:
+            # Run synchronously for dev / testing
+            from alerts.tasks import auto_scan_folders
+            result = auto_scan_folders()
+            return Response({'message': 'Auto-scan complete', 'stats': result})
+
+
+class AutoScanLogsView(generics.ListAPIView):
+    """
+    GET /api/v1/ai/auto-scan/logs/
+    Returns the AutoScanLog history (most recent first).
+    Optional query params: ?file_type=image|video  ?detected=true|false
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from alerts.models import AutoScanLog
+        qs = AutoScanLog.objects.all()
+
+        file_type = request.query_params.get('file_type')
+        if file_type in ('image', 'video'):
+            qs = qs.filter(file_type=file_type)
+
+        detected = request.query_params.get('detected')
+        if detected == 'true':
+            qs = qs.filter(detection_found=True)
+        elif detected == 'false':
+            qs = qs.filter(detection_found=False)
+
+        qs = qs[:200]   # cap at 200 rows
+        data = [
+            {
+                'id':               log.id,
+                'file_path':        log.file_path,
+                'file_name':        os.path.basename(log.file_path),
+                'file_type':        log.file_type,
+                'file_size':        log.file_size,
+                'scanned_at':       log.scanned_at,
+                'detection_found':  log.detection_found,
+                'predicted_result': log.predicted_result,
+                'confidence':       log.confidence,
+                'output_path':      log.output_path,
+            }
+            for log in qs
+        ]
+        return Response({'count': len(data), 'results': data})
+
+
+class AutoScanConfigView(APIView):
+    """
+    GET  /api/v1/ai/auto-scan/config/  — return current config
+    PATCH /api/v1/ai/auto-scan/config/ — update thresholds at runtime (staff only)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            'input_images_dir':       getattr(settings, 'AUTO_SCAN_INPUT_IMAGES',       ''),
+            'input_videos_dir':       getattr(settings, 'AUTO_SCAN_INPUT_VIDEOS',       ''),
+            'output_dir':             getattr(settings, 'AUTO_SCAN_OUTPUT_DIR',         ''),
+            'disease_threshold':      getattr(settings, 'AUTO_SCAN_DISEASE_THRESHOLD',  0.60),
+            'lameness_threshold':     getattr(settings, 'AUTO_SCAN_LAMENESS_THRESHOLD', 0.60),
+            'schedule':               'every 15 minutes',
+        })
+
+    def patch(self, request):
+        if not request.user.is_staff:
+            return Response({'error': 'Staff access required'}, status=status.HTTP_403_FORBIDDEN)
+
+        allowed = ('AUTO_SCAN_DISEASE_THRESHOLD', 'AUTO_SCAN_LAMENESS_THRESHOLD')
+        updated = {}
+        for key in allowed:
+            param = key.lower().replace('auto_scan_', '')
+            val   = request.data.get(param)
+            if val is not None:
+                try:
+                    setattr(settings, key, float(val))
+                    updated[key] = float(val)
+                except (ValueError, TypeError):
+                    return Response({'error': f'Invalid value for {param}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'updated': updated})

@@ -239,3 +239,49 @@ class HealthAlert(BaseAlert):
 
     def __str__(self):
         return f"HEALTH [{self.severity.upper()}]: {self.title}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Auto-scan system
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AutoScanLog(models.Model):
+    """
+    Tracks every file processed by the background auto-scan task.
+    Used for deduplication (skip files already seen with the same mtime)
+    and to provide an audit trail visible in the admin + API.
+    """
+    FILE_TYPE_CHOICES = [
+        ('image', 'Image'),
+        ('video', 'Video'),
+    ]
+
+    file_path        = models.CharField(max_length=500)
+    file_mtime       = models.FloatField(help_text="os.path.getmtime() at scan time")
+    file_size        = models.BigIntegerField(help_text="File size in bytes")
+    file_type        = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES)
+    scanned_at       = models.DateTimeField(auto_now_add=True)
+
+    detection_found  = models.BooleanField(default=False)
+    predicted_result = models.CharField(max_length=100, blank=True)
+    confidence       = models.FloatField(null=True, blank=True)
+
+    output_path      = models.CharField(max_length=500, blank=True,
+                                        help_text="Path where detected file was copied")
+
+    # Links to created records (optional — may be null if detection not found)
+    detection          = models.ForeignKey(Detection, on_delete=models.SET_NULL,
+                                           null=True, blank=True, related_name='scan_logs')
+    lameness_detection = models.ForeignKey('health.LamenessDetection', on_delete=models.SET_NULL,
+                                           null=True, blank=True, related_name='scan_logs')
+
+    class Meta:
+        ordering = ['-scanned_at']
+        verbose_name = 'Auto Scan Log'
+        verbose_name_plural = 'Auto Scan Logs'
+        # Composite unique key: same file + same mtime = already processed
+        unique_together = [('file_path', 'file_mtime')]
+
+    def __str__(self):
+        status = f"{self.predicted_result} ({self.confidence:.0%})" if self.detection_found else "clean"
+        return f"{self.file_type.upper()} | {self.file_path} → {status}"

@@ -7,6 +7,7 @@ Registered in settings.CELERY_BEAT_SCHEDULE:
 """
 
 import os
+import shutil
 import requests
 from datetime import timedelta, date
 
@@ -186,3 +187,284 @@ def check_environmental_conditions():
         'humidity': humidity,
         'wind_kmh': round(wind_kmh, 1),
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Image / video file extensions the scanner will pick up
+# ─────────────────────────────────────────────────────────────────────────────
+_IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp'}
+_VIDEO_EXTS = {'.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.3gp'}
+
+
+def _get_system_user():
+    """Return the first superuser (or first active user) for auto-scan records."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    user = User.objects.filter(is_superuser=True, is_active=True).order_by('id').first()
+    if user is None:
+        user = User.objects.filter(is_active=True).order_by('id').first()
+    return user
+
+
+def _copy_to_output(src_path, output_root, subfolder):
+    """
+    Copy *src_path* into *output_root/<today>/<subfolder>/* preserving the
+    original filename.  Returns the destination path string.
+    """
+    today_str = date.today().isoformat()          # e.g. "2026-04-04"
+    dest_dir  = os.path.join(output_root, today_str, subfolder)
+    os.makedirs(dest_dir, exist_ok=True)
+    dest_path = os.path.join(dest_dir, os.path.basename(src_path))
+    # Avoid clobbering an existing file with the same name
+    if os.path.exists(dest_path):
+        base, ext = os.path.splitext(os.path.basename(src_path))
+        dest_path = os.path.join(dest_dir, f"{base}_{int(timezone.now().timestamp())}{ext}")
+    shutil.copy2(src_path, dest_path)
+    return dest_path
+
+
+def _already_scanned(file_path, file_mtime):
+    """True if an AutoScanLog row exists for this exact path + mtime."""
+    from alerts.models import AutoScanLog
+    return AutoScanLog.objects.filter(file_path=file_path, file_mtime=file_mtime).exists()
+
+
+def _scan_image(file_path, system_user, output_root, threshold, stats):
+    """
+    Run DiseaseDetector on one image.
+    Creates Detection + HealthAlert + AutoScanLog.
+    Copies the file to the output folder if a disease is detected.
+    """
+    from alerts.models import AutoScanLog, HealthAlert
+    from alerts.models import Detection
+
+    file_mtime = os.path.getmtime(file_path)
+    file_size  = os.path.getsize(file_path)
+
+    if _already_scanned(file_path, file_mtime):
+        stats['skipped'] += 1
+        return
+
+    log_kwargs = dict(
+        file_path=file_path,
+        file_mtime=file_mtime,
+        file_size=file_size,
+        file_type='image',
+    )
+
+    try:
+        from ai_service.disease_detector import DiseaseDetector
+        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'model_vit.pth')
+        detector = DiseaseDetector(model_path)
+        result   = detector.predict(file_path)
+    except Exception as e:
+        AutoScanLog.objects.get_or_create(
+            file_path=file_path, file_mtime=file_mtime,
+            defaults={**log_kwargs, 'predicted_result': f'error: {e}'},
+        )
+        stats['errors'] += 1
+        return
+
+    disease    = result.get('disease', 'unknown')
+    confidence = result.get('confidence', 0.0)
+    is_disease = disease not in ('healthy', 'not_cow') and confidence >= threshold
+
+    output_path = ''
+    detection   = None
+
+    if is_disease:
+        output_path = _copy_to_output(file_path, output_root, 'disease')
+
+        # Save a Detection record (image stored as path reference, not upload)
+        detection = Detection.objects.create(
+            user=system_user,
+            predicted_disease=disease,
+            confidence=confidence,
+            all_probabilities=result.get('all_probabilities'),
+            processing_time=result.get('processing_time'),
+            model_used=result.get('model_used', 'vit'),
+        )
+
+        # Create a HealthAlert and ping all active users
+        from django.contrib.auth import get_user_model
+        for user in get_user_model().objects.filter(is_active=True):
+            ha = HealthAlert.objects.create(
+                user=user,
+                title=f"Auto-Scan: {disease.replace('-', ' ').title()} Detected",
+                message=(
+                    f"Disease '{disease}' detected with {confidence:.0%} confidence "
+                    f"in file '{os.path.basename(file_path)}'. "
+                    f"The file has been saved to the output folder for review."
+                ),
+                severity='critical' if confidence >= 0.80 else 'warning',
+                alert_type='disease',
+                detection=detection,
+            )
+            ha.send_email_notification()
+            ha.ping_system()
+
+        stats['detected'] += 1
+    else:
+        stats['clean'] += 1
+
+    AutoScanLog.objects.get_or_create(
+        file_path=file_path, file_mtime=file_mtime,
+        defaults={
+            **log_kwargs,
+            'detection_found': is_disease,
+            'predicted_result': disease,
+            'confidence': confidence,
+            'output_path': output_path,
+            'detection': detection,
+        },
+    )
+
+
+def _scan_video(file_path, system_user, output_root, threshold, stats):
+    """
+    Run LamenessDetector on one video.
+    Creates a LamenessDetection + HealthAlert + AutoScanLog.
+    Copies the file to the output folder if lameness is detected.
+    """
+    from alerts.models import AutoScanLog, HealthAlert
+    from health.models import LamenessDetection
+
+    file_mtime = os.path.getmtime(file_path)
+    file_size  = os.path.getsize(file_path)
+
+    if _already_scanned(file_path, file_mtime):
+        stats['skipped'] += 1
+        return
+
+    log_kwargs = dict(
+        file_path=file_path,
+        file_mtime=file_mtime,
+        file_size=file_size,
+        file_type='video',
+    )
+
+    try:
+        from ai_service.lameness_detector import LamenessDetector
+        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'best_livestock_lameness_model.pth')
+        detector = LamenessDetector(model_path)
+        result   = detector.predict(file_path)
+    except Exception as e:
+        AutoScanLog.objects.get_or_create(
+            file_path=file_path, file_mtime=file_mtime,
+            defaults={**log_kwargs, 'predicted_result': f'error: {e}'},
+        )
+        stats['errors'] += 1
+        return
+
+    label      = result.get('disease', 'unknown')    # 'normal' | 'lameness'
+    confidence = result.get('confidence', 0.0)
+    is_lame    = label == 'lameness' and confidence >= threshold
+
+    output_path       = ''
+    lameness_rec      = None
+
+    if is_lame:
+        output_path = _copy_to_output(file_path, output_root, 'lameness')
+
+        lameness_rec = LamenessDetection.objects.create(
+            user=system_user,
+            predicted_condition=label,
+            confidence=confidence,
+            all_probabilities=result.get('all_probabilities'),
+            processing_time=result.get('processing_time'),
+            model_used=result.get('model_used', 'vit_lstm'),
+            frames_sampled=result.get('frames_sampled'),
+        )
+
+        from django.contrib.auth import get_user_model
+        for user in get_user_model().objects.filter(is_active=True):
+            ha = HealthAlert.objects.create(
+                user=user,
+                title=f"Auto-Scan: Lameness Detected",
+                message=(
+                    f"Lameness detected with {confidence:.0%} confidence "
+                    f"in video '{os.path.basename(file_path)}'. "
+                    f"The file has been saved to the output folder for review."
+                ),
+                severity='critical' if confidence >= 0.80 else 'warning',
+                alert_type='lameness',
+                lameness_detection=lameness_rec,
+            )
+            ha.send_email_notification()
+            ha.ping_system()
+
+        stats['detected'] += 1
+    else:
+        stats['clean'] += 1
+
+    AutoScanLog.objects.get_or_create(
+        file_path=file_path, file_mtime=file_mtime,
+        defaults={
+            **log_kwargs,
+            'detection_found': is_lame,
+            'predicted_result': label,
+            'confidence': confidence,
+            'output_path': output_path,
+            'lameness_detection': lameness_rec,
+        },
+    )
+
+
+@shared_task
+def auto_scan_folders():
+    """
+    Periodic task (every 15 min by default) that scans two input folders:
+      - AUTO_SCAN_INPUT_IMAGES → runs DiseaseDetector on each image
+      - AUTO_SCAN_INPUT_VIDEOS → runs LamenessDetector on each video
+
+    Files already scanned (same path + mtime) are skipped.
+    If a disease or lameness is detected above the confidence threshold:
+      - The file is copied to AUTO_SCAN_OUTPUT_DIR/<date>/<disease|lameness>/
+      - A Detection / LamenessDetection record is created
+      - A HealthAlert is created for every active user + email sent + system pinged
+
+    Returns a stats dict summarising this run.
+    """
+    images_dir  = getattr(settings, 'AUTO_SCAN_INPUT_IMAGES',       '')
+    videos_dir  = getattr(settings, 'AUTO_SCAN_INPUT_VIDEOS',       '')
+    output_root = getattr(settings, 'AUTO_SCAN_OUTPUT_DIR',         '')
+    dis_thresh  = getattr(settings, 'AUTO_SCAN_DISEASE_THRESHOLD',  0.60)
+    lam_thresh  = getattr(settings, 'AUTO_SCAN_LAMENESS_THRESHOLD', 0.60)
+
+    # Ensure input directories exist (create them if needed)
+    for d in (images_dir, videos_dir, output_root):
+        if d:
+            os.makedirs(d, exist_ok=True)
+
+    system_user = _get_system_user()
+    if system_user is None:
+        return {'error': 'No active user found — cannot create records'}
+
+    stats = {'images_scanned': 0, 'videos_scanned': 0,
+             'detected': 0, 'clean': 0, 'skipped': 0, 'errors': 0}
+
+    # ── Scan images ──────────────────────────────────────────────────────────
+    if images_dir and os.path.isdir(images_dir):
+        for fname in os.listdir(images_dir):
+            ext = os.path.splitext(fname)[1].lower()
+            if ext not in _IMAGE_EXTS:
+                continue
+            full_path = os.path.join(images_dir, fname)
+            if not os.path.isfile(full_path):
+                continue
+            stats['images_scanned'] += 1
+            _scan_image(full_path, system_user, output_root, dis_thresh, stats)
+
+    # ── Scan videos ──────────────────────────────────────────────────────────
+    if videos_dir and os.path.isdir(videos_dir):
+        for fname in os.listdir(videos_dir):
+            ext = os.path.splitext(fname)[1].lower()
+            if ext not in _VIDEO_EXTS:
+                continue
+            full_path = os.path.join(videos_dir, fname)
+            if not os.path.isfile(full_path):
+                continue
+            stats['videos_scanned'] += 1
+            _scan_video(full_path, system_user, output_root, lam_thresh, stats)
+
+    return stats

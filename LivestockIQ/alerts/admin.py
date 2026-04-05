@@ -1,6 +1,6 @@
 
 from django.contrib import admin
-from .models import Alert, Detection, EnvironmentalAlert, VaccinationAlert, HealthAlert
+from .models import Alert, Detection, EnvironmentalAlert, VaccinationAlert, HealthAlert, AutoScanLog
 
 
 @admin.register(Detection)
@@ -92,3 +92,30 @@ class HealthAlertAdmin(admin.ModelAdmin):
         ('Status',     {'fields': ('is_resolved', 'resolved_at', 'email_sent')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
+
+
+@admin.register(AutoScanLog)
+class AutoScanLogAdmin(admin.ModelAdmin):
+    list_display  = ['id', 'file_name_short', 'file_type', 'detection_found',
+                     'predicted_result', 'confidence_pct', 'scanned_at']
+    list_filter   = ['file_type', 'detection_found', 'scanned_at']
+    search_fields = ['file_path', 'predicted_result']
+    readonly_fields = ['scanned_at', 'file_mtime', 'file_size']
+
+    fieldsets = (
+        ('File Info',    {'fields': ('file_path', 'file_type', 'file_mtime', 'file_size')}),
+        ('Result',       {'fields': ('detection_found', 'predicted_result', 'confidence', 'output_path')}),
+        ('Links',        {'fields': ('detection', 'lameness_detection')}),
+        ('Timestamps',   {'fields': ('scanned_at',), 'classes': ('collapse',)}),
+    )
+
+    @admin.display(description='File')
+    def file_name_short(self, obj):
+        import os
+        return os.path.basename(obj.file_path)
+
+    @admin.display(description='Confidence')
+    def confidence_pct(self, obj):
+        if obj.confidence is None:
+            return '—'
+        return f"{obj.confidence:.0%}"

@@ -18,6 +18,10 @@ class TransactionListCreateView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         queryset = Transaction.objects.filter(user=self.request.user)
+# The `        ` in the code snippet you provided is used for indentation. In Python, proper
+# indentation is crucial for defining the structure and scope of code blocks. It ensures that the code
+# is organized and readable, and it also determines which lines of code belong to a specific block
+# such as a function, loop, or conditional statement.
         
         # Filter by type if provided
         transaction_type = self.request.query_params.get('type')

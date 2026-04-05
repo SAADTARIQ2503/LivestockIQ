@@ -80,6 +80,11 @@ urlpatterns = [
     path('ai/history/',              alerts.DetectionHistoryView.as_view(), name='detection-history'),
     path('ai/detections/<int:pk>/',  alerts.DetectionDetailView.as_view(), name='detection-detail'),
 
+    # ── Auto-scan ─────────────────────────────────────────────────────────────
+    path('ai/auto-scan/trigger/', alerts.AutoScanTriggerView.as_view(),  name='auto-scan-trigger'),
+    path('ai/auto-scan/logs/',    alerts.AutoScanLogsView.as_view(),     name='auto-scan-logs'),
+    path('ai/auto-scan/config/',  alerts.AutoScanConfigView.as_view(),   name='auto-scan-config'),
+
     # ── Lameness Detection ────────────────────────────────────────────────────
     path('health/lameness/detect/',  LamenessDetectView.as_view(),  name='lameness-detect'),
     path('health/lameness/history/', LamenessHistoryView.as_view(), name='lameness-history'),

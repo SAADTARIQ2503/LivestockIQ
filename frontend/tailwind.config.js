@@ -47,6 +47,15 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(-10deg)' },
+          '50%':       { transform: 'rotate(10deg)'  },
+        },
+      },
+      animation: {
+        wiggle: 'wiggle 0.6s ease-in-out infinite',
+      },
     },
   },
   plugins: [],
