@@ -149,7 +149,7 @@ export default function AnimalDetail() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Animal Details</h1>
-            <p className="text-gray-600 mt-1">ID: {animal.id}</p>
+            <p className="text-gray-600 mt-1">Animal #{animal.user_animal_id ?? animal.id}</p>
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export default function AnimalDetail() {
               </div>
               <div>
                 <CardTitle className="text-2xl">{animal.animal_type}</CardTitle>
-                <p className="text-gray-600 mt-1">Animal ID: {animal.id}</p>
+                <p className="text-gray-600 mt-1">Animal #{animal.user_animal_id ?? animal.id}</p>
                 {/* NEW: Farm name display */}
                 {animal.farm_name && (
                   <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">

@@ -232,6 +232,23 @@ class HealthAlert(BaseAlert):
                                            null=True, blank=True, related_name='health_alerts')
     alert_type         = models.CharField(max_length=20, choices=ALERT_TYPE_CHOICES, default='disease')
 
+    def ping_system(self):
+        """Override to carry the detection / lameness_detection FK into the generic Alert feed."""
+        if not Alert.objects.filter(
+            user=self.user,
+            title=self.title,
+            is_resolved=False,
+        ).exists():
+            Alert.objects.create(
+                user=self.user,
+                title=self.title,
+                message=self.message,
+                severity=self.severity,
+                animal=self.animal,
+                detection=self.detection,
+                lameness_detection=self.lameness_detection,
+            )
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Health Alert'

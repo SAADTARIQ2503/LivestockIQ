@@ -217,6 +217,12 @@ export default function Dashboard() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Overdue:</span>
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  {dashboardData?.vaccinations?.overdue || 0}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Total:</span>
                 <span className="font-semibold text-gray-900 dark:text-white">
                   {dashboardData?.vaccinations?.total || 0}

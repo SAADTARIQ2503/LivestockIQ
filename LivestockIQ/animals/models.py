@@ -1,10 +1,9 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 
 
 class Animal(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    # New: link to farm (nullable so existing animals don't break)
     farm = models.ForeignKey(
         'farms.Farm',
         on_delete=models.CASCADE,
@@ -12,14 +11,30 @@ class Animal(models.Model):
         blank=True,
         related_name='animals'
     )
+    # Per-user sequential ID (1, 2, 3 … resets for each user)
+    user_animal_id = models.PositiveIntegerField(null=True, blank=True, editable=False)
+
     animal_type = models.CharField(max_length=50)
     age = models.CharField(max_length=50)
     sex = models.CharField(max_length=10)
     is_healthy = models.BooleanField(default=True)
     required_vaccine = models.CharField(max_length=255, blank=True, null=True)
 
+    class Meta:
+        unique_together = [('user', 'user_animal_id')]
+
+    def save(self, *args, **kwargs):
+        if self.user_id and self.user_animal_id is None:
+            with transaction.atomic():
+                last = (
+                    Animal.objects.filter(user_id=self.user_id)
+                    .aggregate(max_id=models.Max('user_animal_id'))['max_id']
+                ) or 0
+                self.user_animal_id = last + 1
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.animal_type} (Farm: {self.farm})"
+        return f"#{self.user_animal_id} {self.animal_type} (Farm: {self.farm})"
 
 
 class MortalityRecord(models.Model):

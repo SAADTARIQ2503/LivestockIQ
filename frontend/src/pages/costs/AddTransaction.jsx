@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useCosts } from '@/hooks/useCosts';
 import { useAnimals } from '@/hooks/useAnimals';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ArrowLeft, DollarSign } from 'lucide-react';
+import axios from '@/api/axios';
 
 /**
  * Add Transaction Page
@@ -17,12 +19,21 @@ export default function AddTransaction() {
   const { createTransaction, isCreating } = useCosts();
   const { animals, isLoadingAnimals } = useAnimals();
 
+  const { data: farmsData, isLoading: isLoadingFarms } = useQuery({
+    queryKey: ['farms'],
+    queryFn: () => axios.get('/farms/'),
+  });
+  const farmsList = Array.isArray(farmsData?.data)
+    ? farmsData.data
+    : (farmsData?.data?.results || []);
+
   const [formData, setFormData] = useState({
     type: 'expense',
     category: '',
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
+    farm: '',
     animal: '',
     notes: '',
   });
@@ -119,6 +130,7 @@ export default function AddTransaction() {
       amount: parseFloat(formData.amount),
       description: formData.description || null,
       date: formData.date,
+      farm: formData.farm ? parseInt(formData.farm) : null,
       animal: formData.animal ? parseInt(formData.animal) : null,
       notes: formData.notes || null,
     };
@@ -274,6 +286,32 @@ export default function AddTransaction() {
               )}
             </div>
 
+            {/* Farm (Optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="farm">Farm (Optional)</Label>
+              {isLoadingFarms ? (
+                <p className="text-sm text-gray-500">Loading farms...</p>
+              ) : (
+                <select
+                  id="farm"
+                  name="farm"
+                  value={formData.farm}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">All Farms / General</option>
+                  {farmsList.map(farm => (
+                    <option key={farm.id} value={farm.id}>
+                      {farm.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <p className="text-sm text-gray-500">
+                Associate this transaction with a specific farm
+              </p>
+            </div>
+
             {/* Animal (Optional) */}
             <div className="space-y-2">
               <Label htmlFor="animal">
@@ -292,7 +330,7 @@ export default function AddTransaction() {
                   <option value="">None (General transaction)</option>
                   {animalsList.map(animal => (
                     <option key={animal.id} value={animal.id}>
-                      ID: {animal.id} - {animal.animal_type} ({animal.sex}, {animal.age} months)
+                      #{animal.user_animal_id ?? animal.id} - {animal.animal_type} ({animal.sex}, {animal.age} months)
                     </option>
                   ))}
                 </select>

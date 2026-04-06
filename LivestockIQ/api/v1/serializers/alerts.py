@@ -4,6 +4,7 @@ Alerts/Anomaly Detection Serializers
 """
 from rest_framework import serializers
 from alerts.models import Alert, Detection, EnvironmentalAlert, VaccinationAlert, HealthAlert
+from api.v1.serializers.health import LamenessDetectionSerializer
 
 
 class AnomalySerializer(serializers.Serializer):
@@ -69,29 +70,56 @@ class AcknowledgeAnomalySerializer(serializers.Serializer):
 
 
 class DetectionSerializer(serializers.ModelSerializer):
-    """Serializer for Detection model"""
-    
+    """Serializer for Detection model — image/video URLs are absolute."""
+    image_url = serializers.SerializerMethodField()
+    video_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Detection
         fields = [
-            'id', 'animal', 'image', 'video',
+            'id', 'animal', 'image', 'image_url', 'video', 'video_url',
             'predicted_disease', 'confidence', 'all_probabilities',
-            'model_used', 'processing_time', 'created_at', 'updated_at'
+            'model_used', 'processing_time', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'predicted_disease', 'confidence', 
-                          'all_probabilities', 'model_used', 'processing_time',
-                          'created_at', 'updated_at']
+        read_only_fields = ['id', 'predicted_disease', 'confidence',
+                            'all_probabilities', 'model_used', 'processing_time',
+                            'created_at', 'updated_at']
+
+    def _abs(self, file_field):
+        if not file_field:
+            return None
+        try:
+            url = file_field.url          # e.g. /media/detections/...
+        except Exception:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        # Fallback: prepend the Django server base (works for same-host setups)
+        from django.conf import settings as s
+        base = getattr(s, 'DJANGO_BASE_URL', 'http://localhost:8000')
+        return f"{base.rstrip('/')}{url}"
+
+    def get_image_url(self, obj):
+        return self._abs(obj.image)
+
+    def get_video_url(self, obj):
+        return self._abs(obj.video)
 
 
 class AlertSerializer(serializers.ModelSerializer):
-    """Serializer for Alert model"""
-    
+    """Serializer for Alert model — includes nested detection/lameness detail with media URLs."""
+    detection_detail          = DetectionSerializer(source='detection', read_only=True)
+    lameness_detection_detail = LamenessDetectionSerializer(source='lameness_detection', read_only=True)
+
     class Meta:
         model = Alert
         fields = [
             'id', 'title', 'message', 'severity',
-            'animal', 'detection', 'lameness_detection', 'is_resolved', 'resolved_at',
-            'created_at', 'updated_at'
+            'animal', 'detection', 'detection_detail',
+            'lameness_detection', 'lameness_detection_detail',
+            'is_resolved', 'resolved_at',
+            'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'resolved_at']
 

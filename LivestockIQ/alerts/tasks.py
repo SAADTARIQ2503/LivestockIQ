@@ -232,11 +232,11 @@ def _already_scanned(file_path, file_mtime):
 def _scan_image(file_path, system_user, output_root, threshold, stats):
     """
     Run DiseaseDetector on one image.
-    Creates Detection + HealthAlert + AutoScanLog.
+    Creates Detection (with image attached) + HealthAlert + AutoScanLog.
     Copies the file to the output folder if a disease is detected.
     """
-    from alerts.models import AutoScanLog, HealthAlert
-    from alerts.models import Detection
+    from django.core.files import File
+    from alerts.models import AutoScanLog, HealthAlert, Detection
 
     file_mtime = os.path.getmtime(file_path)
     file_size  = os.path.getsize(file_path)
@@ -255,8 +255,8 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
     try:
         from ai_service.disease_detector import DiseaseDetector
         model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'model_vit.pth')
-        detector = DiseaseDetector(model_path)
-        result   = detector.predict(file_path)
+        detector   = DiseaseDetector(model_path)
+        result     = detector.predict(file_path)
     except Exception as e:
         AutoScanLog.objects.get_or_create(
             file_path=file_path, file_mtime=file_mtime,
@@ -275,8 +275,8 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
     if is_disease:
         output_path = _copy_to_output(file_path, output_root, 'disease')
 
-        # Save a Detection record (image stored as path reference, not upload)
-        detection = Detection.objects.create(
+        # Create Detection record and attach the image file
+        detection = Detection(
             user=system_user,
             predicted_disease=disease,
             confidence=confidence,
@@ -284,8 +284,11 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
             processing_time=result.get('processing_time'),
             model_used=result.get('model_used', 'vit'),
         )
+        with open(file_path, 'rb') as f:
+            detection.image.save(os.path.basename(file_path), File(f), save=False)
+        detection.save()
 
-        # Create a HealthAlert and ping all active users
+        # Create a HealthAlert for every active user
         from django.contrib.auth import get_user_model
         for user in get_user_model().objects.filter(is_active=True):
             ha = HealthAlert.objects.create(
@@ -293,7 +296,7 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
                 title=f"Auto-Scan: {disease.replace('-', ' ').title()} Detected",
                 message=(
                     f"Disease '{disease}' detected with {confidence:.0%} confidence "
-                    f"in file '{os.path.basename(file_path)}'. "
+                    f"in '{os.path.basename(file_path)}'. "
                     f"The file has been saved to the output folder for review."
                 ),
                 severity='critical' if confidence >= 0.80 else 'warning',
@@ -366,15 +369,19 @@ def _scan_video(file_path, system_user, output_root, threshold, stats):
     if is_lame:
         output_path = _copy_to_output(file_path, output_root, 'lameness')
 
-        lameness_rec = LamenessDetection.objects.create(
+        # Create LamenessDetection record and attach the video file
+        from django.core.files import File
+        lameness_rec = LamenessDetection(
             user=system_user,
-            predicted_condition=label,
+            predicted_result=label,
             confidence=confidence,
             all_probabilities=result.get('all_probabilities'),
             processing_time=result.get('processing_time'),
-            model_used=result.get('model_used', 'vit_lstm'),
-            frames_sampled=result.get('frames_sampled'),
+            frames_sampled=result.get('frames_sampled') or 20,
         )
+        with open(file_path, 'rb') as f:
+            lameness_rec.video.save(os.path.basename(file_path), File(f), save=False)
+        lameness_rec.save()
 
         from django.contrib.auth import get_user_model
         for user in get_user_model().objects.filter(is_active=True):

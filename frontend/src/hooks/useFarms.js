@@ -16,6 +16,8 @@ export const useFarms = () => {
     queryKey: ['farms-weather'],
     queryFn: farmsAPI.getFarmsWeather,
     staleTime: 10 * 60 * 1000,
+    retry: false,           // don't retry on 503 — key is simply not configured
+    refetchOnWindowFocus: false,
   });
 
   const createMutation = useMutation({

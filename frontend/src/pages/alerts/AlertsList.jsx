@@ -252,12 +252,55 @@ const navigate = useNavigate();
                           )}
                         </div>
 
-                        {isExpanded && alert.detection && (
-                          <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm space-y-1 border border-gray-200">
-                            <p className="font-medium text-gray-700">AI Detection Details</p>
-                            <p className="text-gray-600">
-                              Detection ID: <span className="font-medium">{alert.detection}</span>
-                            </p>
+                        {isExpanded && (alert.detection_detail || alert.lameness_detection_detail) && (
+                          <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                            <p className="text-sm font-medium text-gray-700">AI Detection Details</p>
+
+                            {/* Disease detection — image */}
+                            {alert.detection_detail && (
+                              <div className="flex gap-4 items-start">
+                                {alert.detection_detail.image_url && (
+                                  <img
+                                    src={alert.detection_detail.image_url}
+                                    alt="Detected"
+                                    className="w-40 h-40 object-cover rounded-lg border border-gray-300 flex-shrink-0"
+                                  />
+                                )}
+                                <div className="text-sm space-y-1 text-gray-600">
+                                  <p><span className="font-medium">Disease:</span> {alert.detection_detail.predicted_disease}</p>
+                                  <p><span className="font-medium">Confidence:</span> {(alert.detection_detail.confidence * 100).toFixed(1)}%</p>
+                                  {alert.detection_detail.model_used && (
+                                    <p><span className="font-medium">Model:</span> {alert.detection_detail.model_used}</p>
+                                  )}
+                                  {alert.detection_detail.processing_time && (
+                                    <p><span className="font-medium">Processing:</span> {alert.detection_detail.processing_time.toFixed(2)}s</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Lameness detection — video */}
+                            {alert.lameness_detection_detail && (
+                              <div className="flex gap-4 items-start">
+                                {alert.lameness_detection_detail.video_url && (
+                                  <video
+                                    src={alert.lameness_detection_detail.video_url}
+                                    controls
+                                    className="w-56 h-40 rounded-lg border border-gray-300 flex-shrink-0 bg-black"
+                                  />
+                                )}
+                                <div className="text-sm space-y-1 text-gray-600">
+                                  <p><span className="font-medium">Result:</span> {alert.lameness_detection_detail.predicted_result}</p>
+                                  <p><span className="font-medium">Confidence:</span> {(alert.lameness_detection_detail.confidence * 100).toFixed(1)}%</p>
+                                  {alert.lameness_detection_detail.frames_sampled && (
+                                    <p><span className="font-medium">Frames sampled:</span> {alert.lameness_detection_detail.frames_sampled}</p>
+                                  )}
+                                  {alert.lameness_detection_detail.processing_time && (
+                                    <p><span className="font-medium">Processing:</span> {alert.lameness_detection_detail.processing_time.toFixed(2)}s</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -265,7 +308,7 @@ const navigate = useNavigate();
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {alert.detection && (
+                      {(alert.detection || alert.lameness_detection) && (
                         <Button
                           variant="ghost"
                           size="sm"

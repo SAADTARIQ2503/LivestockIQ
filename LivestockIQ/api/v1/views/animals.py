@@ -33,7 +33,9 @@ class AnimalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only animals belonging to the current user."""
-        queryset = Animal.objects.filter(user=self.request.user).order_by('-id')
+        queryset = Animal.objects.filter(user=self.request.user).exclude(
+            mortality_record__isnull=False
+        ).order_by('-id')
 
         # Support optional query-param filters on the list endpoint
         farm_id = self.request.query_params.get('farm')

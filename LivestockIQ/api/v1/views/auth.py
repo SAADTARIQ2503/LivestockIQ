@@ -180,73 +180,68 @@ def dashboard_stats_view(request):
     """
     from animals.models import Animal, MortalityRecord
     from health.models import VaccinationSchedule
-    from django.db.models import Count, Q
-    from datetime import datetime, timedelta, date as date_obj
+    from django.db.models import Count
+    from datetime import timedelta, date as date_obj
 
     user = request.user
-    
-    # Animal statistics
-    total_animals = Animal.objects.filter(user=user).count()
-    healthy_animals = Animal.objects.filter(user=user, is_healthy=True).count()
+    today = date_obj.today()
+
+    # ── Animal statistics (exclude dead animals) ─────────────────────────────
+    live_animals = Animal.objects.filter(user=user).exclude(mortality_record__isnull=False)
+    total_animals     = live_animals.count()
+    healthy_animals   = live_animals.filter(is_healthy=True).count()
     unhealthy_animals = total_animals - healthy_animals
-    
-    # Vaccination statistics
-    total_schedules = VaccinationSchedule.objects.filter(
-        Q(animal__user=user) | Q(is_group=True)
-    ).count()
-    completed_vaccinations = VaccinationSchedule.objects.filter(
-        Q(animal__user=user) | Q(is_group=True),
-        is_completed=True
-    ).count()
-    pending_vaccinations = total_schedules - completed_vaccinations
-    
-    # Upcoming vaccinations (next 7 days)
-    today = datetime.now().date()
-    next_week = today + timedelta(days=7)
-    upcoming_vaccinations = VaccinationSchedule.objects.filter(
-        Q(animal__user=user) | Q(is_group=True),
-        schedule_date__range=[today, next_week],
-        is_completed=False
-    ).count()
-    
-    # Animals by type
-    animals_by_type = Animal.objects.filter(user=user).values('animal_type').annotate(
-        count=Count('id')
+
+    animals_by_type = list(
+        live_animals
+        .values('animal_type')
+        .annotate(count=Count('id'))
+        .order_by('-count')
     )
 
-    # Mortality statistics
-    today_date = date_obj.today()
-    this_month_start = today_date.replace(day=1)
-    total_deaths = MortalityRecord.objects.filter(farm__user=user).count()
+    # ── Vaccination statistics (only this user's animals) ────────────────────
+    user_schedules = VaccinationSchedule.objects.filter(animal__user=user)
+
+    total_schedules       = user_schedules.count()
+    completed_vaccinations = user_schedules.filter(is_completed=True).count()
+    overdue_vaccinations  = user_schedules.filter(
+        is_completed=False,
+        schedule_date__lt=today,
+    ).count()
+    # pending = not completed and not overdue (due today or in the future)
+    pending_vaccinations  = user_schedules.filter(
+        is_completed=False,
+        schedule_date__gte=today,
+    ).count()
+    upcoming_vaccinations = user_schedules.filter(
+        is_completed=False,
+        schedule_date__range=[today, today + timedelta(days=7)],
+    ).count()
+
+    # ── Mortality statistics ─────────────────────────────────────────────────
+    this_month_start = today.replace(day=1)
+    total_deaths      = MortalityRecord.objects.filter(farm__user=user).count()
     deaths_this_month = MortalityRecord.objects.filter(
         farm__user=user,
-        date_of_death__gte=this_month_start
+        date_of_death__gte=this_month_start,
     ).count()
 
     return Response({
         'animals': {
-            'total': total_animals,
-            'healthy': healthy_animals,
+            'total':     total_animals,
+            'healthy':   healthy_animals,
             'unhealthy': unhealthy_animals,
-            'by_type': list(animals_by_type)
+            'by_type':   animals_by_type,
         },
         'vaccinations': {
-            'total': total_schedules,
+            'total':     total_schedules,
             'completed': completed_vaccinations,
-            'pending': pending_vaccinations,
-            'upcoming': upcoming_vaccinations
-        },
-        'vaccination_chart': {
-            'labels': ['Vaccinated', 'Unvaccinated', 'Overdue'],
-            'data': [
-                completed_vaccinations,
-                pending_vaccinations,
-                0  # You can calculate overdue based on dates
-            ],
-            'colors': ["#28a745", '#ffc107', '#dc3545']
+            'pending':   pending_vaccinations,
+            'overdue':   overdue_vaccinations,
+            'upcoming':  upcoming_vaccinations,
         },
         'mortality': {
-            'total': total_deaths,
+            'total':      total_deaths,
             'this_month': deaths_this_month,
         },
     })

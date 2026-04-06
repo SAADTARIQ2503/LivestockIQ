@@ -239,7 +239,7 @@ export default function ScheduleVaccination() {
                     <option value="">Select an animal</option>
                     {animalsList.map(animal => (
                       <option key={animal.id} value={animal.id}>
-                        ID: {animal.id} - {animal.animal_type} ({animal.sex}, {animal.age} months)
+                        #{animal.user_animal_id ?? animal.id} - {animal.animal_type} ({animal.sex}, {animal.age} months)
                       </option>
                     ))}
                   </select>

@@ -140,10 +140,26 @@ class VaccinationScheduleCreateSerializer(serializers.ModelSerializer):
 
 
 class LamenessDetectionSerializer(serializers.ModelSerializer):
+    video_url = serializers.SerializerMethodField()
+
     class Meta:
         model = LamenessDetection
         fields = (
-            'id', 'animal', 'video', 'predicted_result', 'confidence',
+            'id', 'animal', 'video', 'video_url', 'predicted_result', 'confidence',
             'all_probabilities', 'processing_time', 'frames_sampled', 'created_at',
         )
         read_only_fields = fields
+
+    def get_video_url(self, obj):
+        if not obj.video:
+            return None
+        request = self.context.get('request')
+        try:
+            url = obj.video.url
+        except Exception:
+            return None
+        if request:
+            return request.build_absolute_uri(url)
+        from django.conf import settings as s
+        base = getattr(s, 'DJANGO_BASE_URL', 'http://localhost:8000')
+        return f"{base.rstrip('/')}{url}"

@@ -17,17 +17,18 @@ class TransactionListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = Transaction.objects.filter(user=self.request.user)
-# The `        ` in the code snippet you provided is used for indentation. In Python, proper
-# indentation is crucial for defining the structure and scope of code blocks. It ensures that the code
-# is organized and readable, and it also determines which lines of code belong to a specific block
-# such as a function, loop, or conditional statement.
-        
+        queryset = Transaction.objects.filter(user=self.request.user).select_related('farm')
+
+        # Filter by farm
+        farm_id = self.request.query_params.get('farm')
+        if farm_id:
+            queryset = queryset.filter(farm_id=farm_id)
+
         # Filter by type if provided
         transaction_type = self.request.query_params.get('type')
         if transaction_type in ['expense', 'revenue']:
             queryset = queryset.filter(type=transaction_type)
-        
+
         # Filter by date range if provided
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
@@ -35,7 +36,7 @@ class TransactionListCreateView(generics.ListCreateAPIView):
             queryset = queryset.filter(date__gte=start_date)
         if end_date:
             queryset = queryset.filter(date__lte=end_date)
-        
+
         return queryset
     
     def perform_create(self, serializer):
@@ -63,11 +64,15 @@ class SummaryView(APIView):
     
     def get(self, request):
         user_transactions = Transaction.objects.filter(user=request.user)
-        
+
+        farm_id = request.query_params.get('farm')
+        if farm_id:
+            user_transactions = user_transactions.filter(farm_id=farm_id)
+
         # Get date range if provided
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
-        
+
         if start_date:
             user_transactions = user_transactions.filter(date__gte=start_date)
         if end_date:

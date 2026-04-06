@@ -3,6 +3,7 @@ venv/
 node_modules/
 .env
 LivestockIQ/media/models/*.pth
+LivestockIQ/auto_scan/
 model_vit.pth
 LivestockIQ/media/detections
 __pycache__/

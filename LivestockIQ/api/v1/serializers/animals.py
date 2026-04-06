@@ -19,6 +19,7 @@ class AnimalListSerializer(serializers.ModelSerializer):
         model = Animal
         fields = [
             'id',
+            'user_animal_id',
             'animal_type',
             'age',
             'sex',
@@ -69,6 +70,7 @@ class AnimalSerializer(serializers.ModelSerializer):
         model = Animal
         fields = [
             'id',
+            'user_animal_id',
             'animal_type',
             'age',
             'sex',
@@ -81,7 +83,7 @@ class AnimalSerializer(serializers.ModelSerializer):
             'vaccination_status',
             'user',
         ]
-        read_only_fields = ['id', 'user']
+        read_only_fields = ['id', 'user_animal_id', 'user']
     
     def get_farm_name(self, obj):
         """Return farm name"""

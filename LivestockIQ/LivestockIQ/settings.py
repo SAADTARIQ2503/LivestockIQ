@@ -317,3 +317,5 @@ EMAIL_TEST_RECIPIENT = os.environ.get('EMAIL_TEST_RECIPIENT', '')
 # Media files configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Used to build absolute media URLs when a request object is not available
+DJANGO_BASE_URL = os.environ.get('DJANGO_BASE_URL', 'http://localhost:8000')

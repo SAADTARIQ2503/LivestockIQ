@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from animals.models import Animal
+from farms.models import Farm
 
 
 class Transaction(models.Model):
@@ -11,17 +12,24 @@ class Transaction(models.Model):
         ('expense', 'Expense'),
         ('revenue', 'Revenue'),
     ]
-    
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    farm = models.ForeignKey(
+        Farm,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='transactions',
+    )
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     category = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, blank=True, null=True)
     date = models.DateField()
     animal = models.ForeignKey(
-        Animal, 
-        on_delete=models.SET_NULL, 
-        blank=True, 
+        Animal,
+        on_delete=models.SET_NULL,
+        blank=True,
         null=True,
         related_name='transactions'
     )

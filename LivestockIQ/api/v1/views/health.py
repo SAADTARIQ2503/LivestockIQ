@@ -281,9 +281,9 @@ class LamenessDetectView(APIView):
         detection.frames_sampled = result['frames_sampled']
         detection.save()
 
-        # Auto-create alerts if lameness detected with high confidence
-        if result['disease'] == 'lameness' and result['confidence'] > 0.70:
-            severity = 'critical' if result['confidence'] > 0.90 else 'warning'
+        # Auto-create alerts whenever lameness is detected
+        if result['disease'] == 'lameness' and result['confidence'] > 0.50:
+            severity = 'critical' if result['confidence'] > 0.80 else 'warning'
             title   = 'Lameness Detected'
             message = f"ViT-LSTM detected lameness with {result['confidence']*100:.1f}% confidence."
 

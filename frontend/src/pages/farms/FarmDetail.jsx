@@ -136,7 +136,7 @@ export default function FarmDetail() {
     if (!search) return true;
     const searchLower = search.toLowerCase();
     return (
-      animal.id.toString().includes(searchLower) ||
+      (animal.user_animal_id ?? animal.id).toString().includes(searchLower) ||
       animal.animal_type.toLowerCase().includes(searchLower) ||
       animal.sex.toLowerCase().includes(searchLower)
     );
@@ -408,7 +408,7 @@ export default function FarmDetail() {
                         <Beef className="text-primary" size={24} />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">ID: {animal.id}</h3>
+                        <h3 className="font-semibold text-lg">Animal #{animal.user_animal_id ?? animal.id}</h3>
                         <p className="text-sm text-gray-600">{animal.animal_type}</p>
                       </div>
                     </div>

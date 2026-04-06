@@ -151,9 +151,10 @@ class EnvironmentStatusView(APIView):
         season      = determine_season(lat, month)
         s_key, s_label = assess_status(temp, humidity, wind_speed)
 
-        # Sunrise / sunset (epoch → HH:MM)
+        # Sunrise / sunset — apply location's UTC offset so times are local
+        tz_offset = data.get('timezone', 0)   # seconds east of UTC
         def epoch_to_time(ts):
-            return datetime.utcfromtimestamp(ts).strftime('%H:%M') if ts else '--'
+            return datetime.utcfromtimestamp(ts + tz_offset).strftime('%H:%M') if ts else '--'
 
         sys_data = data.get('sys', {})
 

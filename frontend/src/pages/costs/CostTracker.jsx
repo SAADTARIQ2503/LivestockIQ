@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useCosts } from '@/hooks/useCosts';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, TrendingUp, TrendingDown, DollarSign, FileText, Trash2 } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, FileText, Trash2, Building2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/utils/formatters';
+import axios from '@/api/axios';
 
 /**
  * Cost Tracker Page
@@ -13,15 +15,24 @@ import { formatCurrency, formatDate } from '@/utils/formatters';
  */
 export default function CostTracker() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('all'); // all, expenses, revenue
-  
-  const { 
-    transactions, 
-    isLoadingTransactions, 
+  const [activeTab, setActiveTab] = useState('all');
+  const [farmFilter, setFarmFilter] = useState('');
+
+  const { data: farmsData } = useQuery({
+    queryKey: ['farms'],
+    queryFn: () => axios.get('/farms/'),
+  });
+  const farmsList = Array.isArray(farmsData?.data)
+    ? farmsData.data
+    : (farmsData?.data?.results || []);
+
+  const {
+    transactions,
+    isLoadingTransactions,
     summary,
     deleteTransaction,
-    isDeleting 
-  } = useCosts();
+    isDeleting,
+  } = useCosts(farmFilter ? { farm: farmFilter } : {});
 
   /**
    * Get filtered transactions based on active tab
@@ -154,6 +165,33 @@ export default function CostTracker() {
         </Card>
       </div>
 
+      {/* Farm Filter */}
+      {farmsList.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <Building2 size={16} className="text-gray-500" />
+          <span className="text-sm font-medium text-gray-600">Farm:</span>
+          <button
+            onClick={() => setFarmFilter('')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              farmFilter === '' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            All Farms
+          </button>
+          {farmsList.map(farm => (
+            <button
+              key={farm.id}
+              onClick={() => setFarmFilter(String(farm.id))}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                farmFilter === String(farm.id) ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {farm.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200">
         {[
@@ -199,10 +237,19 @@ export default function CostTracker() {
                         <h3 className="font-semibold">{transaction.description || 'Transaction'}</h3>
                         {getTypeBadge(transaction.type)}
                       </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-600 flex-wrap">
                         <span>Category: {transaction.category}</span>
                         <span>•</span>
                         <span>Date: {formatDate(transaction.date)}</span>
+                        {transaction.farm_name && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <Building2 size={12} />
+                              {transaction.farm_name}
+                            </span>
+                          </>
+                        )}
                         {transaction.animal && (
                           <>
                             <span>•</span>
