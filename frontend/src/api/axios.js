@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_BASE_URL, STORAGE_KEYS } from '@/utils/constants';
+import { useAuthStore } from '@/store/authStore';
 
 /**
  * Axios instance configured for LivestockIQ API
@@ -65,11 +66,9 @@ axiosInstance.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear storage and redirect to login
-        localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-        localStorage.removeItem(STORAGE_KEYS.USER);
-        
+        // Refresh failed, clear all auth state and redirect to login
+        useAuthStore.getState().logout();
+
         // Redirect to login
         window.location.href = '/login';
         

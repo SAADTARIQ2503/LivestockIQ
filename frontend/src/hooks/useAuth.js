@@ -11,7 +11,7 @@ import { QUERY_KEYS, SUCCESS_MESSAGES } from '@/utils/constants';
 export const useAuth = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, setAuth, logout: storeLogout } = useAuthStore();
+  const { user, isAuthenticated, setAuth, logout: storeLogout } = useAuthStore();
   const { addNotification } = useNotificationStore();
 
   /**
@@ -118,7 +118,7 @@ export const useAuth = () => {
   const profileQuery = useQuery({
     queryKey: QUERY_KEYS.auth.user,
     queryFn: authAPI.getProfile,
-    enabled: !!user,
+    enabled: !!user && isAuthenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 

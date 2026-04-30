@@ -66,8 +66,12 @@ export const useAuthStore = create(
     {
       name: 'auth-storage',
       getStorage: () => localStorage,
-      // Only persist user data, not tokens (tokens handled separately)
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

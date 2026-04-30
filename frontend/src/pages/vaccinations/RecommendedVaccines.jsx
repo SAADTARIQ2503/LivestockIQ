@@ -14,27 +14,27 @@ import { ANIMAL_TYPE_OPTIONS } from '@/utils/constants';
 // ─── Season helpers ───────────────────────────────────────────────────────────
 
 const SEASON_OPTIONS = [
-  { value: 'Spring', label: 'Spring  ' },
-  { value: 'Summer', label: 'Summer  ' },
-  { value: 'Autumn', label: 'Autumn  ' },
-  { value: 'Winter', label: 'Winter  ' },
-  { value: 'Annual', label: 'Annual ' },
+  { value: 'Spring', label: 'Spring' },
+  { value: 'Summer', label: 'Summer' },
+  { value: 'Autumn', label: 'Autumn' },
+  { value: 'Winter', label: 'Winter' },
+  { value: 'Annual', label: 'Annual' },
 ];
 
 function getCurrentSeason() {
-  const month = new Date().getMonth() + 1; // 1-12
+  const month = new Date().getMonth() + 1;
   if (month >= 3 && month <= 5) return 'Spring';
   if (month >= 6 && month <= 8) return 'Summer';
   if (month >= 9 && month <= 11) return 'Autumn';
-  return 'Winter'; // Dec, Jan, Feb
+  return 'Winter';
 }
 
 // ─── Confidence bar ───────────────────────────────────────────────────────────
 
 const CONFIDENCE_CONFIG = {
-  high: { min: 0.7, label: 'High Match', color: 'bg-green-100 text-green-800 border-green-200', bar: 'bg-green-500' },
-  medium: { min: 0.4, label: 'Good Match', color: 'bg-blue-100 text-blue-800 border-blue-200', bar: 'bg-blue-500' },
-  low: { min: 0.01, label: 'Partial Match', color: 'bg-gray-100 text-gray-700 border-gray-200', bar: 'bg-gray-400' },
+  high:   { label: 'High Match',    color: 'bg-green-100 text-green-800 border-green-200', bar: 'bg-green-500' },
+  medium: { label: 'Good Match',    color: 'bg-blue-100 text-blue-800 border-blue-200',   bar: 'bg-blue-500'  },
+  low:    { label: 'Partial Match', color: 'bg-gray-100 text-gray-700 border-gray-200',   bar: 'bg-gray-400'  },
 };
 
 function getConfidenceTier(score) {
@@ -66,15 +66,15 @@ function ConfidenceBar({ score }) {
 
 // ─── Vaccine card ─────────────────────────────────────────────────────────────
 
-function VaccineCard({ vaccine, onSchedule }) {
-  const [expanded, setExpanded] = useState(false);
-
+function VaccineCard({ vaccine, onViewDetails, onSchedule }) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card
+      className="hover:shadow-md transition-shadow cursor-pointer group"
+      onClick={() => onViewDetails(vaccine)}
+    >
       <CardContent className="p-5">
-        {/* Header */}
         <div className="flex items-start gap-3 mb-3">
-          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
             <Syringe className="text-primary" size={20} />
           </div>
           <div className="flex-1 min-w-0">
@@ -84,10 +84,8 @@ function VaccineCard({ vaccine, onSchedule }) {
           </div>
         </div>
 
-        {/* Confidence */}
         <ConfidenceBar score={vaccine.confidence} />
 
-        {/* Quick info chips */}
         <div className="flex flex-wrap gap-2 mt-3">
           {vaccine.vaccination_season && (
             <span className="flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
@@ -102,46 +100,19 @@ function VaccineCard({ vaccine, onSchedule }) {
           )}
         </div>
 
-        {/* Expandable details */}
-        {expanded && (
-          <div className="mt-3 pt-3 border-t border-gray-100 space-y-2 text-sm">
-            {vaccine.age_at_first_dose && (
-              <div>
-                <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">First Dose</span>
-                <p className="text-gray-800 mt-0.5">{vaccine.age_at_first_dose}</p>
-              </div>
-            )}
-            {vaccine.booster_dose && (
-              <div>
-                <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Booster</span>
-                <p className="text-gray-800 mt-0.5">{vaccine.booster_dose}</p>
-              </div>
-            )}
-            {vaccine.related_information && (
-              <div className="p-2.5 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex items-start gap-1.5">
-                  <AlertCircle size={14} className="text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-yellow-800">{vaccine.related_information}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Actions */}
         <div className="flex gap-2 mt-3">
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setExpanded(!expanded)}
+            onClick={(e) => { e.stopPropagation(); onViewDetails(vaccine); }}
             className="text-xs text-gray-500 flex-1"
           >
             <Info size={13} className="mr-1" />
-            {expanded ? 'Less' : 'Details'}
+            Details
           </Button>
           <Button
             size="sm"
-            onClick={() => onSchedule(vaccine.vaccine_name)}
+            onClick={(e) => { e.stopPropagation(); onSchedule(vaccine.vaccine_name); }}
             className="flex-1 text-xs"
           >
             <Calendar size={13} className="mr-1" />
@@ -159,25 +130,13 @@ export default function VaccineRecommendations() {
   const navigate = useNavigate();
   const currentSeason = getCurrentSeason();
 
-  const [query, setQuery] = useState('');
-  const [season, setSeason] = useState(currentSeason); // pre-filled on mount
+  const [query, setQuery]   = useState('');
+  const [season, setSeason] = useState(currentSeason);
   const [species, setSpecies] = useState('');
 
-  // If text typed → use it as primary signal (season/species still passed as hints)
-  // If no text → build query from dropdowns
-  // When no text typed, build a richer query so LSH has enough signal
   const buildFallbackQuery = () => {
-    const parts = [];
-
-    if (season) parts.push(season);
-    if (species) {
-      parts.push(species);
-    } else {
-      // No species selected — add generic livestock terms so LSH
-      // searches broadly across all animal types
-      parts.push('cattle buffalo sheep goat livestock vaccine');
-    }
-
+    const parts = [season || ''];
+    parts.push(species || 'cattle buffalo sheep goat livestock vaccine');
     return parts.join(' ');
   };
 
@@ -186,23 +145,19 @@ export default function VaccineRecommendations() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['vaccine-recommendations', query, season, species],
     queryFn: () =>
-      healthAPI.getVaccineRecommendations({
-        q: queryString,
-        season,
-        species,
-        top_n: 12,
-      }),
-    enabled: true,           // auto-runs on mount with current season
+      healthAPI.getVaccineRecommendations({ q: queryString, season, species, top_n: 12 }),
+    enabled: true,
     staleTime: 5 * 60 * 1000,
   });
 
-  const results = data?.data?.results || [];
-  const isDirty = query || season !== currentSeason || species;
+  const results  = data?.data?.results || [];
+  const isDirty  = query || season !== currentSeason || species;
 
-
-  const handleSchedule = (vaccineName) => {
+  const handleSchedule   = (vaccineName) =>
     navigate('/vaccinations/schedule', { state: { vaccine_name: vaccineName } });
-  };
+
+  const handleViewDetails = (vaccine) =>
+    navigate(`/vaccinations/recommended/${vaccine.id ?? 0}`, { state: { vaccine } });
 
   const handleReset = () => {
     setQuery('');
@@ -237,7 +192,6 @@ export default function VaccineRecommendations() {
       <Card>
         <CardContent className="p-4 space-y-4">
 
-          {/* Free-text search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Search by disease or vaccine name
@@ -264,7 +218,6 @@ export default function VaccineRecommendations() {
             )}
           </div>
 
-          {/* Season + Animal type dropdowns */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Season</label>
@@ -296,7 +249,6 @@ export default function VaccineRecommendations() {
             </div>
           </div>
 
-          {/* Status bar + quick chips */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs text-gray-500">
               <div className="flex items-center gap-1.5">
@@ -325,17 +277,17 @@ export default function VaccineRecommendations() {
               )}
             </div>
 
-            {/* Quick chips */}
             <div className="flex flex-wrap gap-1.5 items-center">
               <span className="text-xs text-gray-400">Quick:</span>
               {['foot and mouth', 'lumpy skin', 'anthrax', 'rabies', 'brucellosis', 'blackleg'].map((chip) => (
                 <button
                   key={chip}
                   onClick={() => setQuery(query === chip ? '' : chip)}
-                  className={`px-2.5 py-0.5 text-xs rounded-full transition-colors capitalize border ${query === chip
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-gray-100 hover:bg-primary/10 hover:text-primary text-gray-600 border-transparent'
-                    }`}
+                  className={`px-2.5 py-0.5 text-xs rounded-full transition-colors capitalize border ${
+                    query === chip
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-gray-100 hover:bg-primary/10 hover:text-primary text-gray-600 border-transparent'
+                  }`}
                 >
                   {chip}
                 </button>
@@ -382,7 +334,12 @@ export default function VaccineRecommendations() {
           {results.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {results.map((vaccine, i) => (
-                <VaccineCard key={i} vaccine={vaccine} onSchedule={handleSchedule} />
+                <VaccineCard
+                  key={i}
+                  vaccine={vaccine}
+                  onViewDetails={handleViewDetails}
+                  onSchedule={handleSchedule}
+                />
               ))}
             </div>
           ) : (
@@ -414,9 +371,9 @@ export default function VaccineRecommendations() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             {[
               ['Follow the Schedule', 'Administer vaccines on the recommended timeline for best protection.'],
-              ['Proper Storage', 'Store vaccines at the correct temperature per manufacturer specs.'],
-              ['Record Keeping', 'Maintain accurate records of all vaccinations administered.'],
-              ['Consult a Vet', 'Always verify vaccination protocols with a licensed veterinarian.'],
+              ['Proper Storage',      'Store vaccines at the correct temperature per manufacturer specs.'],
+              ['Record Keeping',      'Maintain accurate records of all vaccinations administered.'],
+              ['Consult a Vet',       'Always verify vaccination protocols with a licensed veterinarian.'],
             ].map(([title, desc]) => (
               <div key={title} className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">

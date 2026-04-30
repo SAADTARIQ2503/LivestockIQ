@@ -20,6 +20,7 @@ import AnimalDetail from './pages/animals/AnimalDetail';
 import VaccinationsList from './pages/vaccinations/VaccinationsList';
 import ScheduleVaccination from './pages/vaccinations/ScheduleVaccination';
 import VaccineRecommendations from './pages/vaccinations/RecommendedVaccines.jsx';
+import VaccineDetail from './pages/vaccinations/VaccineDetail.jsx';
 import Environment from './pages/environment/Environment';
 import CostTracker from './pages/costs/CostTracker';
 import AddTransaction from './pages/costs/AddTransaction';
@@ -76,7 +77,8 @@ function App() {
             {/* Vaccinations */}
             <Route path="vaccinations"             element={<VaccinationsList />} />
             <Route path="vaccinations/schedule"    element={<ScheduleVaccination />} />
-            <Route path="vaccinations/recommended" element={<VaccineRecommendations />} />
+            <Route path="vaccinations/recommended"        element={<VaccineRecommendations />} />
+            <Route path="vaccinations/recommended/:id"   element={<VaccineDetail />} />
 
             {/* Environment */}
             <Route path="environment" element={<Environment />} />
