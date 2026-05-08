@@ -237,11 +237,13 @@ class LamenessDetectView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        from concurrent.futures import ThreadPoolExecutor
         from ai_service.lameness_detector import LamenessDetector
+        from ai_service.ocr_service import GotOCRService
         from alerts.models import Alert, HealthAlert
 
         video = request.FILES.get('file')
-        animal_id = request.data.get('animal_id')
+        tag_id = request.data.get('tag_id', '').strip()
 
         if not video:
             return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -249,16 +251,15 @@ class LamenessDetectView(APIView):
         if not video.content_type.startswith('video/'):
             return Response({'error': 'Uploaded file must be a video.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Save detection record (video stored via FileField)
+        # Save detection record (video stored via FileField) before running models; animal linked later
         detection = LamenessDetection.objects.create(
             user=request.user,
-            animal_id=animal_id if animal_id else None,
             video=video,
             predicted_result='normal',
             confidence=0.0,
         )
 
-        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'best_livestock_lameness_model.pth')
+        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'best_lameness_model.pth')
         if not os.path.exists(model_path):
             detection.delete()
             return Response(
@@ -266,33 +267,70 @@ class LamenessDetectView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
+        video_path = detection.video.path
+
+        # Run lameness detection + OCR in parallel
         try:
             detector = LamenessDetector(model_path)
-            result = detector.predict(detection.video.path)
+            ocr_svc  = GotOCRService.get_instance()
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                det_future = pool.submit(detector.predict, video_path)
+                ocr_future = pool.submit(ocr_svc.ocr_video_frames, video_path, 3)
+                result   = det_future.result()
+                ocr_text = ocr_future.result(timeout=180)
         except Exception as e:
             detection.delete()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Persist result
+        # Always parse the OCR ID so it can be shown on the frontend
+        # even when no matching animal exists in the database.
+        ocr_id = GotOCRService.parse_animal_id(ocr_text) if ocr_text else None
+
+        # Resolve animal: prefer manual tag_id, fall back to OCR detection
+        resolved_animal = None
+        if tag_id:
+            resolved_animal = Animal.objects.filter(user=request.user, tag_id=tag_id).first()
+
+        if resolved_animal is None and ocr_id is not None:
+            # Try tag_id (farmer's physical mark) first, then system_id
+            resolved_animal = (
+                Animal.objects.filter(user=request.user, tag_id=str(ocr_id)).first()
+                or Animal.objects.filter(user=request.user, system_id=ocr_id).first()
+            )
+
+        # Persist detection result
         detection.predicted_result = result['disease']
-        detection.confidence = result['confidence']
+        detection.confidence       = result['confidence']
         detection.all_probabilities = result['all_probabilities']
-        detection.processing_time = result['processing_time']
-        detection.frames_sampled = result['frames_sampled']
+        detection.processing_time  = result['processing_time']
+        detection.frames_sampled   = result['frames_sampled']
+        if resolved_animal:
+            detection.animal = resolved_animal
         detection.save()
 
-        # Auto-create alerts whenever lameness is detected
+        # Auto-create alerts and mark animal unhealthy whenever lameness is detected
         if result['disease'] == 'lameness' and result['confidence'] > 0.50:
+            if resolved_animal:
+                resolved_animal.is_healthy = False
+                resolved_animal.save(update_fields=['is_healthy'])
+
             severity = 'critical' if result['confidence'] > 0.80 else 'warning'
-            title   = 'Lameness Detected'
-            message = f"ViT-LSTM detected lameness with {result['confidence']*100:.1f}% confidence."
+            animal_ref = (
+                f" (Animal #{resolved_animal.tag_id or resolved_animal.system_id})" if resolved_animal else ""
+            )
+            title   = f'Lameness Detected{animal_ref}'
+            message = (
+                f"ViT-LSTM detected lameness with {result['confidence']*100:.1f}% confidence.{animal_ref} "
+                f"has been marked as not healthy."
+            )
 
             Alert.objects.create(
                 user=request.user,
                 title=title,
                 message=message,
                 severity=severity,
-                animal_id=animal_id if animal_id else None,
+                animal=resolved_animal,
                 lameness_detection=detection,
             )
 
@@ -301,7 +339,7 @@ class LamenessDetectView(APIView):
                 title=title,
                 message=message,
                 severity=severity,
-                animal_id=animal_id if animal_id else None,
+                animal=resolved_animal,
                 lameness_detection=detection,
                 alert_type='lameness',
             )
@@ -311,6 +349,7 @@ class LamenessDetectView(APIView):
         return Response({
             'detection_id': detection.id,
             'result': result,
+            'ocr_detected_animal_id': ocr_id,
         })
 
 

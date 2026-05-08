@@ -8,9 +8,9 @@ class DiseaseDetector:
     def __init__(self, model_path):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self.load_model(model_path)
-        # 4 classes — order matches ImageFolder's alphabetical sort of training folders:
-        # foot-and-mouth / healthy / lumpy / not_cow
-        self.classes = ['foot-and-mouth', 'healthy', 'lumpy', 'not_cow']
+        # 6 classes — alphabetical order matching ImageFolder training folders:
+        # foot-and-mouth / healthy / lumpy / mastitis / not_cow / ringworm
+        self.classes = ['foot-and-mouth', 'healthy', 'lumpy', 'mastitis', 'not_cow', 'ringworm']
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
@@ -19,9 +19,9 @@ class DiseaseDetector:
         ])
 
     def load_model(self, model_path):
-        model = models.vit_b_16()
-        num_features = model.heads.head.in_features
-        model.heads.head = torch.nn.Linear(num_features, 4)
+        model = models.vit_b_16(weights=None)
+        num_features = model.heads.head.in_features  # 768
+        model.heads.head = torch.nn.Linear(num_features, 6)
         model.load_state_dict(torch.load(model_path,
                                          map_location=self.device))
         model.to(self.device)
@@ -48,5 +48,6 @@ class DiseaseDetector:
                 self.classes[i]: probabilities[0][i].item()
                 for i in range(len(self.classes))
             },
-            'processing_time': processing_time
+            'processing_time': processing_time,
+            'model_used': 'ViT-B/16 (disease-v2, 6-class)',
         }

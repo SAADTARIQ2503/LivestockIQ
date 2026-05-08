@@ -3,39 +3,42 @@ import torch
 import torch.nn as nn
 import cv2
 import numpy as np
+from PIL import Image
 from torchvision import models, transforms
 
 
-class ViTLSTM(nn.Module):
+class LivestockViTLSTM(nn.Module):
     """
-    ViT-B/16 backbone + single-layer LSTM head for lameness classification.
-    Architecture must exactly match the saved checkpoint.
+    ViT-B/16 backbone + LSTM head for lameness classification (v2 architecture).
+    Matches the best_lameness_model.pth checkpoint exactly.
     """
 
-    def __init__(self, num_classes: int = 2, hidden_size: int = 256):
+    def __init__(self, num_classes: int = 2):
         super().__init__()
-        vit = models.vit_b_16(weights=None)
-        self.feature_dim = vit.heads.head.in_features   # 768
-        vit.heads.head = nn.Identity()
-        self.backbone = vit
+        # weights=None at inference — checkpoint overwrites them anyway
+        self.backbone = models.vit_b_16(weights=None)
+        self.feature_size = self.backbone.heads.head.in_features  # 768
+        # Replace entire heads module (not just heads.head)
+        self.backbone.heads = nn.Identity()
 
         self.lstm = nn.LSTM(
-            input_size=self.feature_dim,
-            hidden_size=hidden_size,
+            self.feature_size,
+            hidden_size=256,
             num_layers=1,
             batch_first=True,
         )
-        self.fc = nn.Linear(hidden_size, num_classes)
+        self.dropout = nn.Dropout(0.5)
+        self.fc = nn.Linear(256, num_classes)
 
     def forward(self, x):
         # x: (batch, frames, C, H, W)
-        B, T, C, H, W = x.shape
-        x = x.view(B * T, C, H, W)
-        feats = self.backbone(x)          # (B*T, 768)
-        feats = feats.view(B, T, -1)      # (B, T, 768)
-        out, _ = self.lstm(feats)         # (B, T, hidden_size)
-        logits = self.fc(out[:, -1, :])   # last timestep → (B, num_classes)
-        return logits
+        batch_size, seq_len, C, H, W = x.shape
+        x = x.view(batch_size * seq_len, C, H, W)
+        features = self.backbone(x)                        # (B*T, 768)
+        features = features.view(batch_size, seq_len, -1)  # (B, T, 768)
+        lstm_out, _ = self.lstm(features)                  # (B, T, 256)
+        out = self.dropout(lstm_out[:, -1, :])             # last timestep
+        return self.fc(out)                                # (B, num_classes)
 
 
 class LamenessDetector:
@@ -45,7 +48,6 @@ class LamenessDetector:
     def __init__(self, model_path: str):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.transform = transforms.Compose([
-            transforms.ToPILImage(),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406],
@@ -53,10 +55,9 @@ class LamenessDetector:
         ])
         self.model = self._load(model_path)
 
-    def _load(self, path: str) -> ViTLSTM:
-        model = ViTLSTM(num_classes=len(self.CLASSES))
+    def _load(self, path: str) -> LivestockViTLSTM:
+        model = LivestockViTLSTM(num_classes=len(self.CLASSES))
         state = torch.load(path, map_location=self.device)
-        # Support both raw state_dict and checkpoint dicts
         if isinstance(state, dict) and 'model_state_dict' in state:
             state = state['model_state_dict']
         model.load_state_dict(state)
@@ -80,6 +81,7 @@ class LamenessDetector:
                     frames.append(frames[-1])
                 continue
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = Image.fromarray(frame)
             frames.append(self.transform(frame))
         cap.release()
 
@@ -91,8 +93,8 @@ class LamenessDetector:
         return torch.stack(frames)  # (N_FRAMES, C, H, W)
 
     def predict(self, video_path: str) -> dict:
-        frames = self._sample_frames(video_path)           # (T, C, H, W)
-        x = frames.unsqueeze(0).to(self.device)            # (1, T, C, H, W)
+        frames = self._sample_frames(video_path)          # (T, C, H, W)
+        x = frames.unsqueeze(0).to(self.device)           # (1, T, C, H, W)
 
         start = time.time()
         with torch.no_grad():
@@ -109,6 +111,6 @@ class LamenessDetector:
                 for i in range(len(self.CLASSES))
             },
             'processing_time': elapsed,
-            'model_used': 'ViT-LSTM (lameness)',
+            'model_used': 'LivestockViTLSTM (lameness-v2)',
             'frames_sampled': self.N_FRAMES,
         }

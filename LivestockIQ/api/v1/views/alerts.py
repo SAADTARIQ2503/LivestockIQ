@@ -86,21 +86,20 @@ class DetectDiseaseView(APIView):
     
     def post(self, request):
         file = request.FILES.get('file')
-        animal_id = request.data.get('animal_id')
-        
+        tag_id = request.data.get('tag_id', '').strip()
+
         if not file:
             return Response(
                 {'error': 'No file provided'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Determine if image or video
         is_video = file.content_type.startswith('video/')
-        
-        # Create detection record
+
+        # Create detection record (animal linked later after resolution)
         detection = Detection.objects.create(
             user=request.user,
-            animal_id=animal_id if animal_id else None,
             image=file if not is_video else None,
             video=file if is_video else None,
             predicted_disease='healthy',  # Placeholder
@@ -122,19 +121,28 @@ class DetectDiseaseView(APIView):
         else:
             # Synchronous processing
             try:
-                model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'model_vit.pth')
-                
+                from concurrent.futures import ThreadPoolExecutor
+                from ai_service.ocr_service import GotOCRService
+                from animals.models import Animal
+
+                model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'livestock_disease_v2.pth')
+
                 if not os.path.exists(model_path):
                     return Response(
                         {'error': 'AI model not found. Please contact administrator.'},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE
                     )
-                
-                detector = DiseaseDetector(model_path)
 
-                # Use image if provided, otherwise extract first frame from video
+                detector = DiseaseDetector(model_path)
+                ocr_svc  = GotOCRService.get_instance()
+
+                # Resolve media path; for video extract first frame
                 if detection.image:
                     media_path = detection.image.path
+                    _ocr_path = media_path
+                    def ocr_fn(_p=_ocr_path):
+                        from PIL import Image as _Img
+                        return ocr_svc.ocr_image(_Img.open(_p).convert('RGB'))
                 else:
                     import cv2, tempfile
                     cap = cv2.VideoCapture(detection.video.path)
@@ -145,50 +153,86 @@ class DetectDiseaseView(APIView):
                     tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
                     cv2.imwrite(tmp.name, frame)
                     media_path = tmp.name
+                    _vid_path = detection.video.path
+                    def ocr_fn(_p=_vid_path):
+                        return ocr_svc.ocr_video_frames(_p, 3)
 
-                result = detector.predict(media_path)
-                
-                # Update detection
+                # Run detection + OCR in parallel
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    det_future = pool.submit(detector.predict, media_path)
+                    ocr_future = pool.submit(ocr_fn)
+                    result   = det_future.result()
+                    try:
+                        ocr_text = ocr_future.result(timeout=180)
+                    except Exception:
+                        ocr_text = ''
+
+                # Always parse the OCR ID so it can be shown on the frontend
+                # even when no matching animal exists in the database.
+                ocr_id = GotOCRService.parse_animal_id(ocr_text) if ocr_text else None
+
+                # Resolve animal: prefer manual tag_id, fall back to OCR
+                resolved_animal = None
+                if tag_id:
+                    resolved_animal = Animal.objects.filter(user=request.user, tag_id=tag_id).first()
+
+                if resolved_animal is None and ocr_id is not None:
+                    # Try tag_id (farmer's physical mark) first, then system_id
+                    resolved_animal = (
+                        Animal.objects.filter(user=request.user, tag_id=str(ocr_id)).first()
+                        or Animal.objects.filter(user=request.user, system_id=ocr_id).first()
+                    )
+
+                # Persist result
                 detection.predicted_disease = result['disease']
-                detection.confidence = result['confidence']
+                detection.confidence        = result['confidence']
                 detection.all_probabilities = result['all_probabilities']
-                detection.processing_time = result['processing_time']
+                detection.processing_time   = result['processing_time']
+                if resolved_animal:
+                    detection.animal = resolved_animal
                 detection.save()
-                
+
                 # Create alerts if disease detected
                 if result['disease'] != 'healthy' and result['confidence'] > 0.7:
-                    severity = 'critical' if result['confidence'] > 0.9 else 'warning'
-                    title   = f"{result['disease'].replace('-', ' ').title()} Detected"
-                    message = f"AI detected {result['disease']} with {result['confidence']*100:.1f}% confidence."
+                    if resolved_animal:
+                        resolved_animal.is_healthy = False
+                        resolved_animal.save(update_fields=['is_healthy'])
 
-                    # Generic system alert (in-app feed)
+                    severity   = 'critical' if result['confidence'] > 0.9 else 'warning'
+                    animal_ref = f" (Animal #{resolved_animal.tag_id or resolved_animal.system_id})" if resolved_animal else ""
+                    title      = f"{result['disease'].replace('-', ' ').title()} Detected{animal_ref}"
+                    message    = (
+                        f"AI detected {result['disease']} with {result['confidence']*100:.1f}% confidence."
+                        f"{animal_ref} has been marked as not healthy."
+                    )
+
                     Alert.objects.create(
                         user=request.user,
                         title=title,
                         message=message,
                         severity=severity,
-                        animal_id=animal_id if animal_id else None,
+                        animal=resolved_animal,
                         detection=detection,
                     )
 
-                    # Specialized HealthAlert — sends email + pings system
                     health_alert = HealthAlert.objects.create(
                         user=request.user,
                         title=title,
                         message=message,
                         severity=severity,
-                        animal_id=animal_id if animal_id else None,
+                        animal=resolved_animal,
                         detection=detection,
                         alert_type='disease',
                     )
                     health_alert.send_email_notification()
                     health_alert.ping_system()
-                
+
                 return Response({
                     'detection_id': detection.id,
-                    'result': result
+                    'result': result,
+                    'ocr_detected_animal_id': ocr_id,
                 })
-                
+
             except Exception as e:
                 return Response(
                     {'error': str(e)},

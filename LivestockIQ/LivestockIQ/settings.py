@@ -319,3 +319,12 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Used to build absolute media URLs when a request object is not available
 DJANGO_BASE_URL = os.environ.get('DJANGO_BASE_URL', 'http://localhost:8000')
+
+# ==============================================================================
+# OCR — NVIDIA Vision API (Llama 3.2 Vision)
+# Primary backend for animal-brand OCR.  Falls back to GOT-OCR-2.0 if unset.
+# ==============================================================================
+NVIDIA_API_KEY = os.environ.get(
+    'NVIDIA_API_KEY',
+    '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',
+)

@@ -11,8 +11,10 @@ class Animal(models.Model):
         blank=True,
         related_name='animals'
     )
-    # Per-user sequential ID (1, 2, 3 … resets for each user)
-    user_animal_id = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    # Auto-generated sequential ID per user (1, 2, 3 …) — system use only
+    system_id = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    # Farmer-assigned tag / brand ID (e.g. "907", "A-42") — matches the physical mark
+    tag_id = models.CharField(max_length=50, null=True, blank=True)
 
     animal_type = models.CharField(max_length=50)
     age = models.CharField(max_length=50)
@@ -21,20 +23,21 @@ class Animal(models.Model):
     required_vaccine = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
-        unique_together = [('user', 'user_animal_id')]
+        unique_together = [('user', 'system_id')]
 
     def save(self, *args, **kwargs):
-        if self.user_id and self.user_animal_id is None:
+        if self.user_id and self.system_id is None:
             with transaction.atomic():
                 last = (
                     Animal.objects.filter(user_id=self.user_id)
-                    .aggregate(max_id=models.Max('user_animal_id'))['max_id']
+                    .aggregate(max_id=models.Max('system_id'))['max_id']
                 ) or 0
-                self.user_animal_id = last + 1
+                self.system_id = last + 1
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"#{self.user_animal_id} {self.animal_type} (Farm: {self.farm})"
+        tag = f" [{self.tag_id}]" if self.tag_id else ""
+        return f"#{self.system_id}{tag} {self.animal_type} (Farm: {self.farm})"
 
 
 class MortalityRecord(models.Model):

@@ -9,6 +9,7 @@ Registered in settings.CELERY_BEAT_SCHEDULE:
 import os
 import shutil
 import requests
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta, date
 
 from celery import shared_task
@@ -206,6 +207,52 @@ def _get_system_user():
     return user
 
 
+def _ocr_image_file(file_path: str) -> str:
+    """Run GOT-OCR-2.0 on an image file. Returns text or '' on failure."""
+    try:
+        from PIL import Image
+        from ai_service.ocr_service import GotOCRService
+        pil = Image.open(file_path).convert('RGB')
+        return GotOCRService.get_instance().ocr_image(pil)
+    except Exception:
+        return ''
+
+
+def _ocr_video_file(file_path: str) -> str:
+    """Run GOT-OCR-2.0 on key frames of a video. Returns text or '' on failure."""
+    try:
+        from ai_service.ocr_service import GotOCRService
+        return GotOCRService.get_instance().ocr_video_frames(file_path, n_frames=3)
+    except Exception:
+        return ''
+
+
+def _find_animal_by_ocr_id(ocr_text: str):
+    """
+    Parse an animal ID from OCR text and look it up across all animals.
+    Returns the Animal instance or None.
+    """
+    from ai_service.ocr_service import GotOCRService
+    from animals.models import Animal
+    animal_id = GotOCRService.parse_animal_id(ocr_text)
+    if animal_id is None:
+        return None
+    # Try tag_id (farmer's physical mark) first, then system_id
+    return (
+        Animal.objects.filter(tag_id=str(animal_id)).first()
+        or Animal.objects.filter(system_id=animal_id).first()
+    )
+
+
+def _mark_animal_unhealthy(animal) -> None:
+    """Set is_healthy=False on the given Animal instance if it exists."""
+    if animal is None:
+        return
+    if animal.is_healthy:
+        animal.is_healthy = False
+        animal.save(update_fields=['is_healthy'])
+
+
 def _copy_to_output(src_path, output_root, subfolder):
     """
     Copy *src_path* into *output_root/<today>/<subfolder>/* preserving the
@@ -231,7 +278,8 @@ def _already_scanned(file_path, file_mtime):
 
 def _scan_image(file_path, system_user, output_root, threshold, stats):
     """
-    Run DiseaseDetector on one image.
+    Run DiseaseDetector + GOT-OCR-2.0 in parallel on one image.
+    OCR result is used to identify the animal by its brand ID.
     Creates Detection (with image attached) + HealthAlert + AutoScanLog.
     Copies the file to the output folder if a disease is detected.
     """
@@ -252,11 +300,17 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
         file_type='image',
     )
 
+    # Run disease detection + OCR in parallel
     try:
         from ai_service.disease_detector import DiseaseDetector
-        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'model_vit.pth')
-        detector   = DiseaseDetector(model_path)
-        result     = detector.predict(file_path)
+        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'livestock_disease_v2.pth')
+        detector = DiseaseDetector(model_path)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            det_future = pool.submit(detector.predict, file_path)
+            ocr_future = pool.submit(_ocr_image_file, file_path)
+            result   = det_future.result()
+            ocr_text = ocr_future.result(timeout=180)
     except Exception as e:
         AutoScanLog.objects.get_or_create(
             file_path=file_path, file_mtime=file_mtime,
@@ -269,6 +323,9 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
     confidence = result.get('confidence', 0.0)
     is_disease = disease not in ('healthy', 'not_cow') and confidence >= threshold
 
+    # Resolve animal from OCR brand ID
+    animal = _find_animal_by_ocr_id(ocr_text)
+
     output_path = ''
     detection   = None
 
@@ -278,6 +335,7 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
         # Create Detection record and attach the image file
         detection = Detection(
             user=system_user,
+            animal=animal,
             predicted_disease=disease,
             confidence=confidence,
             all_probabilities=result.get('all_probabilities'),
@@ -288,20 +346,29 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
             detection.image.save(os.path.basename(file_path), File(f), save=False)
         detection.save()
 
+        # Mark the identified animal as unhealthy
+        _mark_animal_unhealthy(animal)
+
+        # Build a human-readable animal reference for the alert message
+        animal_ref = (
+            f" Animal #{animal.tag_id or animal.system_id}" if animal else ""
+        )
+
         # Create a HealthAlert for every active user
         from django.contrib.auth import get_user_model
         for user in get_user_model().objects.filter(is_active=True):
             ha = HealthAlert.objects.create(
                 user=user,
-                title=f"Auto-Scan: {disease.replace('-', ' ').title()} Detected",
+                title=f"Auto-Scan: {disease.replace('-', ' ').title()} Detected{animal_ref}",
                 message=(
                     f"Disease '{disease}' detected with {confidence:.0%} confidence "
-                    f"in '{os.path.basename(file_path)}'. "
+                    f"in '{os.path.basename(file_path)}'.{animal_ref} has been marked as not healthy. "
                     f"The file has been saved to the output folder for review."
                 ),
                 severity='critical' if confidence >= 0.80 else 'warning',
                 alert_type='disease',
                 detection=detection,
+                animal=animal,
             )
             ha.send_email_notification()
             ha.ping_system()
@@ -325,7 +392,8 @@ def _scan_image(file_path, system_user, output_root, threshold, stats):
 
 def _scan_video(file_path, system_user, output_root, threshold, stats):
     """
-    Run LamenessDetector on one video.
+    Run LamenessDetector + GOT-OCR-2.0 in parallel on one video.
+    OCR result is used to identify the animal by its brand ID.
     Creates a LamenessDetection + HealthAlert + AutoScanLog.
     Copies the file to the output folder if lameness is detected.
     """
@@ -346,11 +414,17 @@ def _scan_video(file_path, system_user, output_root, threshold, stats):
         file_type='video',
     )
 
+    # Run lameness detection + OCR in parallel
     try:
         from ai_service.lameness_detector import LamenessDetector
-        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'best_livestock_lameness_model.pth')
+        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'best_lameness_model.pth')
         detector = LamenessDetector(model_path)
-        result   = detector.predict(file_path)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            det_future = pool.submit(detector.predict, file_path)
+            ocr_future = pool.submit(_ocr_video_file, file_path)
+            result   = det_future.result()
+            ocr_text = ocr_future.result(timeout=180)
     except Exception as e:
         AutoScanLog.objects.get_or_create(
             file_path=file_path, file_mtime=file_mtime,
@@ -363,8 +437,11 @@ def _scan_video(file_path, system_user, output_root, threshold, stats):
     confidence = result.get('confidence', 0.0)
     is_lame    = label == 'lameness' and confidence >= threshold
 
-    output_path       = ''
-    lameness_rec      = None
+    # Resolve animal from OCR brand ID
+    animal = _find_animal_by_ocr_id(ocr_text)
+
+    output_path  = ''
+    lameness_rec = None
 
     if is_lame:
         output_path = _copy_to_output(file_path, output_root, 'lameness')
@@ -373,6 +450,7 @@ def _scan_video(file_path, system_user, output_root, threshold, stats):
         from django.core.files import File
         lameness_rec = LamenessDetection(
             user=system_user,
+            animal=animal,
             predicted_result=label,
             confidence=confidence,
             all_probabilities=result.get('all_probabilities'),
@@ -383,19 +461,27 @@ def _scan_video(file_path, system_user, output_root, threshold, stats):
             lameness_rec.video.save(os.path.basename(file_path), File(f), save=False)
         lameness_rec.save()
 
+        # Mark the identified animal as unhealthy
+        _mark_animal_unhealthy(animal)
+
+        animal_ref = (
+            f" Animal #{animal.tag_id or animal.system_id}" if animal else ""
+        )
+
         from django.contrib.auth import get_user_model
         for user in get_user_model().objects.filter(is_active=True):
             ha = HealthAlert.objects.create(
                 user=user,
-                title=f"Auto-Scan: Lameness Detected",
+                title=f"Auto-Scan: Lameness Detected{animal_ref}",
                 message=(
                     f"Lameness detected with {confidence:.0%} confidence "
-                    f"in video '{os.path.basename(file_path)}'. "
+                    f"in video '{os.path.basename(file_path)}'.{animal_ref} has been marked as not healthy. "
                     f"The file has been saved to the output folder for review."
                 ),
                 severity='critical' if confidence >= 0.80 else 'warning',
                 alert_type='lameness',
                 lameness_detection=lameness_rec,
+                animal=animal,
             )
             ha.send_email_notification()
             ha.ping_system()
