@@ -416,9 +416,8 @@ def _scan_video(file_path, system_user, output_root, threshold, stats):
 
     # Run lameness detection + OCR in parallel
     try:
-        from ai_service.lameness_detector import LamenessDetector
-        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'best_lameness_model.pth')
-        detector = LamenessDetector(model_path)
+        from ai_service.model_registry import get_lameness_detector
+        detector = get_lameness_detector()
 
         with ThreadPoolExecutor(max_workers=2) as pool:
             det_future = pool.submit(detector.predict, file_path)

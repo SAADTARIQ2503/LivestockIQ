@@ -1,7 +1,6 @@
 from celery import shared_task
 from django.conf import settings
 from alerts.models import Detection, Alert, HealthAlert
-from ai_service.disease_detector import DiseaseDetector
 import os
 
 
@@ -20,10 +19,8 @@ def detect_disease_task(detection_id):
         detection = Detection.objects.get(id=detection_id)
         
         # Get model path
-        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'livestock_disease_v2.pth')
-        
-        # Initialize detector
-        detector = DiseaseDetector(model_path)
+        from ai_service.model_registry import get_disease_detector
+        detector = get_disease_detector()
         
         # Get image path
         image_path = detection.image.path if detection.image else detection.video.path
