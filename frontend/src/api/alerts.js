@@ -56,13 +56,13 @@ export const aiDetectionAPI = {
    * @returns {Promise} API response with detection results
    */
   detectDisease: (formData) => axios.post('/ai/detect/', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000, // 5 min — video OCR + ViT can be slow on CPU
   }),
   detectLameness: (formData) =>
     axios.post('/health/lameness/detect/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000, // 5 min — 20 frames through ViT-LSTM on CPU
     }),
 
   getLamenessHistory: () =>

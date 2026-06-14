@@ -80,110 +80,132 @@ class ActiveAlertsView(generics.ListAPIView):
         return Alert.objects.filter(user=self.request.user, is_resolved=False)
 
 
+def _resolve_animal(user, tag_id, ocr_id):
+    """Return the Animal record matching tag_id or ocr_id, or None."""
+    from animals.models import Animal
+    animal = None
+    if tag_id:
+        animal = Animal.objects.filter(user=user, tag_id=tag_id).first()
+    if animal is None and ocr_id is not None:
+        animal = (
+            Animal.objects.filter(user=user, tag_id=str(ocr_id)).first()
+            or Animal.objects.filter(user=user, system_id=ocr_id).first()
+        )
+    return animal
+
+
+def _create_disease_alerts(request, detection_record, result, resolved_animal):
+    """Create Alert + HealthAlert when a disease is detected above threshold."""
+    disease = result['disease']
+    if disease in ('healthy', 'not_cow') or result['confidence'] <= 0.7:
+        return
+
+    if resolved_animal:
+        resolved_animal.is_healthy = False
+        resolved_animal.save(update_fields=['is_healthy'])
+
+    severity   = 'critical' if result['confidence'] > 0.9 else 'warning'
+    animal_ref = f" (Animal #{resolved_animal.tag_id or resolved_animal.system_id})" if resolved_animal else ""
+    title      = f"{disease.replace('-', ' ').title()} Detected{animal_ref}"
+    message    = (
+        f"AI detected {disease} with {result['confidence'] * 100:.1f}% confidence."
+        f"{animal_ref} has been marked as not healthy."
+    )
+
+    Alert.objects.create(
+        user=request.user,
+        title=title,
+        message=message,
+        severity=severity,
+        animal=resolved_animal,
+        detection=detection_record,
+    )
+    health_alert = HealthAlert.objects.create(
+        user=request.user,
+        title=title,
+        message=message,
+        severity=severity,
+        animal=resolved_animal,
+        detection=detection_record,
+        alert_type='disease',
+    )
+    health_alert.send_email_notification()
+    health_alert.ping_system()
+
+
 class DetectDiseaseView(APIView):
-    """Upload and detect disease"""
+    """Upload and detect disease. Supports multi-cow images."""
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         file = request.FILES.get('file')
         tag_id = request.data.get('tag_id', '').strip()
 
         if not file:
-            return Response(
-                {'error': 'No file provided'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Determine if image or video
         is_video = file.content_type.startswith('video/')
 
-        # Create detection record (animal linked later after resolution)
         detection = Detection.objects.create(
             user=request.user,
             image=file if not is_video else None,
             video=file if is_video else None,
-            predicted_disease='healthy',  # Placeholder
-            confidence=0.0  # Placeholder
+            predicted_disease='healthy',
+            confidence=0.0,
         )
-        
-        # Check if using Celery or sync
+
         use_celery = getattr(settings, 'USE_CELERY', False)
-        
         if use_celery:
-            # Async processing with Celery
             task = detect_disease_task.delay(detection.id)
-            
             return Response({
                 'detection_id': detection.id,
                 'task_id': task.id,
-                'message': 'Processing started. Check status with detection_id.'
+                'message': 'Processing started. Check status with detection_id.',
             }, status=status.HTTP_202_ACCEPTED)
-        else:
-            # Synchronous processing
-            try:
-                from concurrent.futures import ThreadPoolExecutor
-                from ai_service.ocr_service import GotOCRService
-                from animals.models import Animal
 
-                model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'livestock_disease_v2.pth')
+        try:
+            from concurrent.futures import ThreadPoolExecutor
+            from ai_service.ocr_service import GotOCRService
+            import io, tempfile
 
-                if not os.path.exists(model_path):
-                    return Response(
-                        {'error': 'AI model not found. Please contact administrator.'},
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE
-                    )
+            model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'livestock_disease_v2.pth')
+            if not os.path.exists(model_path):
+                return Response(
+                    {'error': 'AI model not found. Please contact administrator.'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
-                detector = DiseaseDetector(model_path)
-                ocr_svc  = GotOCRService.get_instance()
+            detector = DiseaseDetector(model_path)
+            ocr_svc  = GotOCRService.get_instance()
 
-                # Resolve media path; for video extract first frame
-                if detection.image:
-                    media_path = detection.image.path
-                    _ocr_path = media_path
-                    def ocr_fn(_p=_ocr_path):
-                        from PIL import Image as _Img
-                        return ocr_svc.ocr_image(_Img.open(_p).convert('RGB'))
-                else:
-                    import cv2, tempfile
-                    cap = cv2.VideoCapture(detection.video.path)
-                    ret, frame = cap.read()
-                    cap.release()
-                    if not ret:
-                        raise ValueError('Could not extract frame from video.')
-                    tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
-                    cv2.imwrite(tmp.name, frame)
-                    media_path = tmp.name
-                    _vid_path = detection.video.path
-                    def ocr_fn(_p=_vid_path):
-                        return ocr_svc.ocr_video_frames(_p, 3)
+            # ── Video: unchanged single-detection path ────────────────────────
+            if is_video:
+                import cv2
+                cap = cv2.VideoCapture(detection.video.path)
+                ret, frame = cap.read()
+                cap.release()
+                if not ret:
+                    raise ValueError('Could not extract frame from video.')
+                tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+                cv2.imwrite(tmp.name, frame)
+                media_path = tmp.name
+                _vid_path  = detection.video.path
 
-                # Run detection + OCR in parallel
+                def ocr_fn(_p=_vid_path):
+                    return ocr_svc.ocr_video_frames(_p, 3)
+
                 with ThreadPoolExecutor(max_workers=2) as pool:
                     det_future = pool.submit(detector.predict, media_path)
                     ocr_future = pool.submit(ocr_fn)
-                    result   = det_future.result()
+                    result = det_future.result()
                     try:
                         ocr_text = ocr_future.result(timeout=180)
                     except Exception:
                         ocr_text = ''
 
-                # Always parse the OCR ID so it can be shown on the frontend
-                # even when no matching animal exists in the database.
-                ocr_id = GotOCRService.parse_animal_id(ocr_text) if ocr_text else None
+                ocr_id          = GotOCRService.parse_animal_id(ocr_text) if ocr_text else None
+                resolved_animal = _resolve_animal(request.user, tag_id, ocr_id)
 
-                # Resolve animal: prefer manual tag_id, fall back to OCR
-                resolved_animal = None
-                if tag_id:
-                    resolved_animal = Animal.objects.filter(user=request.user, tag_id=tag_id).first()
-
-                if resolved_animal is None and ocr_id is not None:
-                    # Try tag_id (farmer's physical mark) first, then system_id
-                    resolved_animal = (
-                        Animal.objects.filter(user=request.user, tag_id=str(ocr_id)).first()
-                        or Animal.objects.filter(user=request.user, system_id=ocr_id).first()
-                    )
-
-                # Persist result
                 detection.predicted_disease = result['disease']
                 detection.confidence        = result['confidence']
                 detection.all_probabilities = result['all_probabilities']
@@ -192,52 +214,139 @@ class DetectDiseaseView(APIView):
                     detection.animal = resolved_animal
                 detection.save()
 
-                # Create alerts if disease detected
-                if result['disease'] != 'healthy' and result['confidence'] > 0.7:
-                    if resolved_animal:
-                        resolved_animal.is_healthy = False
-                        resolved_animal.save(update_fields=['is_healthy'])
+                _create_disease_alerts(request, detection, result, resolved_animal)
 
-                    severity   = 'critical' if result['confidence'] > 0.9 else 'warning'
-                    animal_ref = f" (Animal #{resolved_animal.tag_id or resolved_animal.system_id})" if resolved_animal else ""
-                    title      = f"{result['disease'].replace('-', ' ').title()} Detected{animal_ref}"
-                    message    = (
-                        f"AI detected {result['disease']} with {result['confidence']*100:.1f}% confidence."
-                        f"{animal_ref} has been marked as not healthy."
-                    )
-
-                    Alert.objects.create(
-                        user=request.user,
-                        title=title,
-                        message=message,
-                        severity=severity,
-                        animal=resolved_animal,
-                        detection=detection,
-                    )
-
-                    health_alert = HealthAlert.objects.create(
-                        user=request.user,
-                        title=title,
-                        message=message,
-                        severity=severity,
-                        animal=resolved_animal,
-                        detection=detection,
-                        alert_type='disease',
-                    )
-                    health_alert.send_email_notification()
-                    health_alert.ping_system()
-
+                single = {
+                    'cow_index':            1,
+                    'detection_id':         detection.id,
+                    'result':               result,
+                    'ocr_detected_animal_id': ocr_id,
+                    'cow_image_url':        None,
+                }
                 return Response({
-                    'detection_id': detection.id,
-                    'result': result,
+                    'cow_count':  1,
+                    'detections': [single],
+                    # backward-compat keys
+                    'detection_id':           detection.id,
+                    'result':                 result,
                     'ocr_detected_animal_id': ocr_id,
                 })
 
-            except Exception as e:
-                return Response(
-                    {'error': str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            # ── Image: detect individual cows, run disease model per crop ─────
+            from PIL import Image as PILImage
+            from django.core.files.base import ContentFile
+            from ai_service.cow_detector import CowDetector
+
+            original_image = PILImage.open(detection.image.path).convert('RGB')
+
+            try:
+                cow_detector = CowDetector.get_instance()
+                cow_crops    = cow_detector.detect_cows(original_image)
+            except Exception:
+                # If cow detection fails for any reason, fall back to single-cow
+                cow_crops = [original_image]
+
+            is_multi = len(cow_crops) > 1
+
+            # Save every crop to a temp file so DiseaseDetector can read it
+            crop_paths = []
+            for crop in cow_crops:
+                tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+                crop.save(tmp.name, format='JPEG')
+                tmp.close()
+                crop_paths.append(tmp.name)
+
+            # Run OCR once on the original image (concurrent with detection)
+            _orig_path = detection.image.path
+
+            def ocr_fn(_p=_orig_path):
+                from PIL import Image as _Img
+                return ocr_svc.ocr_image(_Img.open(_p).convert('RGB'))
+
+            # Run all disease detections + OCR in parallel
+            with ThreadPoolExecutor(max_workers=min(len(crop_paths) + 1, 5)) as pool:
+                detect_futures = [pool.submit(detector.predict, p) for p in crop_paths]
+                ocr_future     = pool.submit(ocr_fn)
+                results        = [f.result() for f in detect_futures]
+                try:
+                    ocr_text = ocr_future.result(timeout=180)
+                except Exception:
+                    ocr_text = ''
+
+            ocr_id = GotOCRService.parse_animal_id(ocr_text) if ocr_text else None
+
+            all_detections = []
+
+            for i, (crop, crop_path, result) in enumerate(zip(cow_crops, crop_paths, results)):
+                # OCR / tag_id only applied to the first cow to avoid false matches
+                cow_ocr_id = ocr_id if i == 0 else None
+                cow_tag_id = tag_id if i == 0 else ''
+                resolved_animal = _resolve_animal(request.user, cow_tag_id, cow_ocr_id)
+
+                if not is_multi:
+                    # Single cow — reuse the original Detection record
+                    det_record = detection
+                    det_record.predicted_disease = result['disease']
+                    det_record.confidence        = result['confidence']
+                    det_record.all_probabilities = result['all_probabilities']
+                    det_record.processing_time   = result['processing_time']
+                    if resolved_animal:
+                        det_record.animal = resolved_animal
+                    det_record.save()
+                else:
+                    # Multi-cow — create a new Detection record with the cropped image
+                    buf = io.BytesIO()
+                    crop.save(buf, format='JPEG')
+                    buf.seek(0)
+
+                    det_record = Detection.objects.create(
+                        user=request.user,
+                        predicted_disease=result['disease'],
+                        confidence=result['confidence'],
+                        all_probabilities=result['all_probabilities'],
+                        processing_time=result['processing_time'],
+                        animal=resolved_animal,
+                    )
+                    det_record.image.save(
+                        f'cow_{i + 1}_from_{detection.id}.jpg',
+                        ContentFile(buf.getvalue()),
+                        save=True,
+                    )
+
+                _create_disease_alerts(request, det_record, result, resolved_animal)
+
+                cow_image_url = (
+                    request.build_absolute_uri(det_record.image.url)
+                    if det_record.image else None
                 )
+                all_detections.append({
+                    'cow_index':              i + 1,
+                    'detection_id':           det_record.id,
+                    'result':                 result,
+                    'ocr_detected_animal_id': cow_ocr_id,
+                    'cow_image_url':          cow_image_url,
+                })
+
+                try:
+                    os.unlink(crop_path)
+                except Exception:
+                    pass
+
+            # Remove the original placeholder record for multi-cow uploads
+            if is_multi:
+                detection.delete()
+
+            return Response({
+                'cow_count':  len(cow_crops),
+                'detections': all_detections,
+                # backward-compat keys (point to first cow)
+                'detection_id':           all_detections[0]['detection_id'],
+                'result':                 all_detections[0]['result'],
+                'ocr_detected_animal_id': all_detections[0]['ocr_detected_animal_id'],
+            })
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class DetectionHistoryView(generics.ListAPIView):

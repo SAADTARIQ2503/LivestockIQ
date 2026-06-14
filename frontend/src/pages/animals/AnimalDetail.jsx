@@ -149,7 +149,7 @@ export default function AnimalDetail() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Animal Details</h1>
-            <p className="text-gray-600 mt-1">Animal #{animal.user_animal_id ?? animal.id}</p>
+            <p className="text-gray-600 mt-1">Animal {animal.tag_id ? `${animal.tag_id} (System #${animal.system_id})` : `#${animal.system_id ?? animal.id}`}</p>
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export default function AnimalDetail() {
               </div>
               <div>
                 <CardTitle className="text-2xl">{animal.animal_type}</CardTitle>
-                <p className="text-gray-600 mt-1">Animal #{animal.user_animal_id ?? animal.id}</p>
+                <p className="text-gray-600 mt-1">Animal {animal.tag_id ? `${animal.tag_id} (System #${animal.system_id})` : `#${animal.system_id ?? animal.id}`}</p>
                 {/* NEW: Farm name display */}
                 {animal.farm_name && (
                   <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
@@ -212,6 +212,18 @@ export default function AnimalDetail() {
               <h3 className="font-semibold text-lg border-b pb-2">Basic Information</h3>
               
               <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-600">System ID:</span>
+                  <span className="font-semibold text-gray-500">#{animal.system_id ?? animal.id}</span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Tag / Brand ID:</span>
+                  <span className="font-semibold">
+                    {animal.tag_id || <span className="text-gray-400 font-normal text-sm">Not set</span>}
+                  </span>
+                </div>
+
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-600">Animal Type:</span>
                   <span className="font-semibold">{animal.animal_type}</span>

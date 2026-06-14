@@ -50,7 +50,8 @@ export default function AnimalsList() {
     if (!search) return true;
     const s = search.toLowerCase();
     return (
-      (animal.user_animal_id ?? animal.id).toString().includes(s) ||
+      (animal.system_id ?? animal.id).toString().includes(s) ||
+      (animal.tag_id && animal.tag_id.toLowerCase().includes(s)) ||
       animal.animal_type.toLowerCase().includes(s) ||
       animal.sex.toLowerCase().includes(s) ||
       (animal.farm_name && animal.farm_name.toLowerCase().includes(s))
@@ -265,7 +266,12 @@ export default function AnimalsList() {
                                 <Beef className="text-primary" size={20} />
                               </div>
                               <div>
-                                <h3 className="font-semibold">Animal #{animal.user_animal_id ?? animal.id}</h3>
+                                <h3 className="font-semibold">
+                                  {animal.tag_id
+                                    ? <>{animal.tag_id} <span className="text-gray-400 font-normal text-xs">#{animal.system_id}</span></>
+                                    : <>#{animal.system_id ?? animal.id}</>
+                                  }
+                                </h3>
                                 <p className="text-sm text-gray-500">{animal.animal_type}</p>
                               </div>
                             </div>

@@ -18,7 +18,8 @@ export default function EditAnimal() {
   const { farms, isLoadingFarms } = useFarms();
 
   const [formData, setFormData] = useState({
-    farm: '', // NEW: Farm selection
+    farm: '',
+    tag_id: '',
     animal_type: '',
     age: '',
     sex: '',
@@ -37,7 +38,8 @@ export default function EditAnimal() {
   useEffect(() => {
     if (animal) {
       setFormData({
-        farm: animal.farm?.toString() || '', // NEW: Include farm
+        farm: animal.farm?.toString() || '',
+        tag_id: animal.tag_id || '',
         animal_type: animal.animal_type || '',
         age: animal.age?.toString() || '',
         sex: animal.sex || '',
@@ -140,7 +142,8 @@ export default function EditAnimal() {
     updateAnimal({
       id: parseInt(id),
       data: {
-        farm: parseInt(formData.farm), // NEW: Include farm
+        farm: parseInt(formData.farm),
+        tag_id: formData.tag_id.trim() || null,
         animal_type: formData.animal_type,
         age: String(parseInt(formData.age)),
         sex: formData.sex,
@@ -252,6 +255,25 @@ export default function EditAnimal() {
                   </p>
                 </>
               )}
+            </div>
+
+            {/* Tag / Brand ID — farmer assigned */}
+            <div className="space-y-2">
+              <Label htmlFor="tag_id">
+                Tag / Brand ID <span className="text-gray-400 font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="tag_id"
+                name="tag_id"
+                type="text"
+                placeholder="e.g. 907, A-42, EAR-105"
+                value={formData.tag_id}
+                onChange={handleChange}
+                maxLength={50}
+              />
+              <p className="text-sm text-gray-500">
+                The physical tag, ear tag, or brand number on the animal. Used to automatically link AI detections.
+              </p>
             </div>
 
             {/* Animal Type */}
