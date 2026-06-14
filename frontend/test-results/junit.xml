@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="65" failures="0" errors="0" time="0.016466125">
+    <testsuite name="src/tests/utils/constants.adversarial.test.js" timestamp="2026-06-14T13:30:28.504Z" hostname="HP-EliteBook-840-G5" tests="65" failures="0" errors="0" skipped="0" time="0.016466125">
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ANIMAL_TYPES exact values &gt; COW is exactly &quot;Cow&quot;" time="0.001342496">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ANIMAL_TYPES exact values &gt; GOAT is exactly &quot;Goat&quot;" time="0.000437498">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ANIMAL_TYPES exact values &gt; SHEEP is exactly &quot;Sheep&quot;" time="0.000340774">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ANIMAL_TYPES exact values &gt; has exactly 3 keys" time="0.000314648">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ANIMAL_TYPE_OPTIONS exact shape &gt; has exactly 3 options" time="0.000212704">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ANIMAL_TYPE_OPTIONS exact shape &gt; first option is Cow" time="0.00021464">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ANIMAL_TYPE_OPTIONS exact shape &gt; second option is Goat" time="0.000230084">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ANIMAL_TYPE_OPTIONS exact shape &gt; third option is Sheep" time="0.000289671">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEX_OPTIONS &gt; has exactly 2 entries" time="0.00027247">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEX_OPTIONS &gt; first is Male" time="0.000173809">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEX_OPTIONS &gt; second is Female" time="0.000121444">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEVERITY_LEVELS &gt; LOW is exactly &quot;Low&quot;" time="0.000118256">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEVERITY_LEVELS &gt; MEDIUM is exactly &quot;Medium&quot;" time="0.000091139">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEVERITY_LEVELS &gt; HIGH is exactly &quot;High&quot;" time="0.000090571">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEVERITY_LEVELS &gt; has exactly 3 levels" time="0.000089828">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEVERITY_COLORS — exact hex values &gt; Low is green #28a745" time="0.00010822">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEVERITY_COLORS — exact hex values &gt; Medium is amber #ffc107" time="0.0000859">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEVERITY_COLORS — exact hex values &gt; High is red #dc3545" time="0.000087201">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASONS &gt; has exactly 5 seasons" time="0.000094037">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASONS &gt; contains Winter" time="0.000752911">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASONS &gt; contains Spring" time="0.000168293">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASONS &gt; contains Summer" time="0.000151515">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASONS &gt; contains Pre-Monsoon" time="0.00016147">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASONS &gt; contains Autumn" time="0.000202881">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASONS &gt; Winter is first season" time="0.000096046">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASON_OPTIONS &gt; has exactly 8 entries" time="0.000112769">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SEASON_OPTIONS &gt; first entry is current season" time="0.000115076">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="Pagination constants &gt; DEFAULT_PAGE_SIZE is 20" time="0.000102355">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="Pagination constants &gt; PAGE_SIZE_OPTIONS has 4 entries" time="0.000094948">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="Pagination constants &gt; PAGE_SIZE_OPTIONS are [10, 20, 50, 100]" time="0.000625628">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="Validation constants &gt; PASSWORD_MIN_LENGTH is exactly 8" time="0.000118454">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="Validation constants &gt; USERNAME_MIN_LENGTH is exactly 5" time="0.00010147">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="Validation constants &gt; USERNAME_MAX_LENGTH is exactly 25" time="0.000096032">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="Validation constants &gt; USERNAME_MIN_LENGTH &lt; USERNAME_MAX_LENGTH" time="0.000122011">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="API_TIMEOUT &gt; is 30000ms (30 seconds)" time="0.000105399">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STORAGE_KEYS exact values &gt; ACCESS_TOKEN key is &quot;access_token&quot;" time="0.000111777">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STORAGE_KEYS exact values &gt; REFRESH_TOKEN key is &quot;refresh_token&quot;" time="0.000092142">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STORAGE_KEYS exact values &gt; USER key is &quot;user&quot;" time="0.000081474">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STORAGE_KEYS exact values &gt; THEME key is &quot;theme&quot;" time="0.0000804">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STORAGE_KEYS exact values &gt; SIDEBAR_COLLAPSED key is &quot;sidebar_collapsed&quot;" time="0.000079406">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STORAGE_KEYS exact values &gt; has exactly 5 keys" time="0.000085871">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="CHART_COLORS &gt; primary is #3b82f6" time="0.000090682">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="CHART_COLORS &gt; success is #28a745" time="0.000080147">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="CHART_COLORS &gt; warning is #ffc107" time="0.000080167">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="CHART_COLORS &gt; danger is #dc3545" time="0.000079915">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="CHART_COLORS &gt; info is #40c4ff" time="0.000080828">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="VACCINATION_CHART_COLORS (health dashboard) &gt; vaccinated is #28a745" time="0.00009504">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="VACCINATION_CHART_COLORS (health dashboard) &gt; pending is #ffc107" time="0.000080198">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="VACCINATION_CHART_COLORS (health dashboard) &gt; overdue is #dc3545" time="0.000079199">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STATUS_COLORS (environment monitoring) &gt; optimal is #28a745" time="0.000097375">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STATUS_COLORS (environment monitoring) &gt; alert is #ffc107" time="0.000080093">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STATUS_COLORS (environment monitoring) &gt; warning is #dc3545" time="0.000090015">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="STATUS_COLORS (environment monitoring) &gt; info is #40c4ff" time="0.00010786">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="QUERY_KEYS &gt; animals.all is [&quot;animals&quot;]" time="0.000136199">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="QUERY_KEYS &gt; animals.statistics is [&quot;animals&quot;, &quot;statistics&quot;]" time="0.000139562">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="QUERY_KEYS &gt; animals.list returns array with filters" time="0.00023167">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="QUERY_KEYS &gt; animals.detail returns array with id" time="0.000250655">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="QUERY_KEYS &gt; auth.dashboard is [&quot;auth&quot;, &quot;dashboard&quot;]" time="0.000196928">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="QUERY_KEYS &gt; alerts.active is [&quot;alerts&quot;, &quot;active&quot;]" time="0.000180127">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="QUERY_KEYS &gt; health.upcoming is [&quot;health&quot;, &quot;schedules&quot;, &quot;upcoming&quot;]" time="0.000138349">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="QUERY_KEYS &gt; health.overdue is [&quot;health&quot;, &quot;schedules&quot;, &quot;overdue&quot;]" time="0.000121419">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ERROR_MESSAGES &gt; UNAUTHORIZED contains &quot;login&quot;" time="0.000110226">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="ERROR_MESSAGES &gt; NETWORK_ERROR references connection" time="0.000095284">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SUCCESS_MESSAGES &gt; LOGIN contains &quot;successful&quot;" time="0.000112188">
+        </testcase>
+        <testcase classname="src/tests/utils/constants.adversarial.test.js" name="SUCCESS_MESSAGES &gt; DELETED references deletion" time="0.000093456">
+        </testcase>
+    </testsuite>
+</testsuites>
