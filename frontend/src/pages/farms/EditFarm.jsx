@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, CheckCircle, AlertTriangle, MapPin } from 'lucide-react';
+import { Search, CheckCircle, AlertTriangle, MapPin, Loader2 } from 'lucide-react';
 
 export default function EditFarm() {
   const { id } = useParams();
@@ -25,6 +25,7 @@ export default function EditFarm() {
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState(null);
   const [geocodeError, setGeocodeError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (farm) {
@@ -36,32 +37,54 @@ export default function EditFarm() {
     }
   }, [farm]);
 
+  const runGeocode = async (addr) => {
+    const res = await geocode({ address: addr });
+    return res.data;
+  };
+
   const handleGeocode = async () => {
     if (!address.trim()) return;
     setGeocodeError('');
     try {
-      const res = await geocode({ address });
-      setCoords(res.data);
-      setAddress(res.data.formatted_address);
+      const data = await runGeocode(address.trim());
+      setCoords(data);
+      setAddress(data.formatted_address);
     } catch (err) {
       setGeocodeError(err.response?.data?.error || 'Could not geocode address.');
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setIsSaving(true);
+
+    let lat = coords?.latitude ?? null;
+    let lon = coords?.longitude ?? null;
+    let finalAddress = address.trim();
+
+    // coords is null when the address was changed — auto-geocode so we don't keep stale coordinates
+    if (!lat || !lon) {
+      try {
+        const data = await runGeocode(finalAddress);
+        lat = data.latitude;
+        lon = data.longitude;
+        finalAddress = data.formatted_address;
+        setCoords(data);
+        setAddress(finalAddress);
+      } catch {
+        // proceed without coordinates if geocoding fails
+      }
+    }
+
     updateFarm(
+      { id, data: { name: name.trim(), address: finalAddress, latitude: lat, longitude: lon } },
       {
-        id,
-        data: {
-          name: name.trim(),
-          address: address.trim(),
-          latitude: coords?.latitude ?? farm?.latitude ?? null,
-          longitude: coords?.longitude ?? farm?.longitude ?? null,
-        },
-      },
-      { onSuccess: () => navigate('/farms') }
+        onSuccess: () => navigate('/farms'),
+        onSettled: () => setIsSaving(false),
+      }
     );
   };
+
+  const busy = isSaving || isUpdating || isGeocoding;
 
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[400px]">
@@ -89,16 +112,20 @@ export default function EditFarm() {
             <div className="flex gap-2">
               <Input
                 value={address}
-                onChange={e => { setAddress(e.target.value); setCoords(null); }}
+                onChange={e => { setAddress(e.target.value); setCoords(null); setGeocodeError(''); }}
                 onKeyDown={e => e.key === 'Enter' && handleGeocode()}
                 className="flex-1"
+                disabled={busy}
               />
-              <Button variant="outline" onClick={handleGeocode} disabled={!address.trim() || isGeocoding}>
+              <Button variant="outline" onClick={handleGeocode} disabled={!address.trim() || busy} title="Preview coordinates">
                 {isGeocoding
-                  ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  ? <Loader2 size={15} className="animate-spin" />
                   : <Search size={16} />}
               </Button>
             </div>
+            <p className="text-xs text-gray-400">
+              Coordinates are set automatically when you save. Use the search button to preview first.
+            </p>
 
             {geocodeError && (
               <div className="flex items-center gap-2 text-sm text-red-600 mt-1">
@@ -120,9 +147,12 @@ export default function EditFarm() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => navigate('/farms')}>Cancel</Button>
-            <Button className="flex-1" onClick={handleSubmit} disabled={isUpdating}>
-              {isUpdating ? 'Saving...' : 'Save Changes'}
+            <Button variant="outline" className="flex-1" onClick={() => navigate('/farms')} disabled={busy}>Cancel</Button>
+            <Button className="flex-1" onClick={handleSubmit} disabled={busy}>
+              {busy
+                ? <><Loader2 size={15} className="animate-spin mr-2" />{isGeocoding || isSaving ? 'Getting location...' : 'Saving...'}</>
+                : 'Save Changes'
+              }
             </Button>
           </div>
         </CardContent>

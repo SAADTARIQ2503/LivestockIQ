@@ -4,7 +4,7 @@ import { useFarms } from '@/hooks/useFarms';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, MapPin, Beef, Thermometer, Cloud } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Beef } from 'lucide-react';
 
 const STATUS_STYLES = {
   optimal: 'bg-green-100 text-green-800',

@@ -82,7 +82,7 @@ WSGI_APPLICATION = 'LivestockIQ.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
         'NAME': os.environ.get('DB_NAME', 'livestockiq'),
         'USER': os.environ.get('DB_USER', 'livestockiq_user'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),

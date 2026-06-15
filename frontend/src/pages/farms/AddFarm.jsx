@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Search, CheckCircle, AlertTriangle } from 'lucide-react';
+import { MapPin, Search, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 
 export default function AddFarm() {
   const navigate = useNavigate();
@@ -13,42 +13,66 @@ export default function AddFarm() {
 
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
-  const [coords, setCoords] = useState(null); // { latitude, longitude, formatted_address }
+  const [coords, setCoords] = useState(null);
   const [geocodeError, setGeocodeError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const runGeocode = async (addr) => {
+    const res = await geocode({ address: addr });
+    return res.data;
+  };
 
   const handleGeocode = async () => {
     if (!address.trim()) return;
     setGeocodeError('');
     setCoords(null);
     try {
-      const res = await geocode({ address });
-      setCoords(res.data);
-      setAddress(res.data.formatted_address); // use the cleaned address from Google
+      const data = await runGeocode(address.trim());
+      setCoords(data);
+      setAddress(data.formatted_address);
     } catch (err) {
       setGeocodeError(err.response?.data?.error || 'Could not geocode address. Try being more specific.');
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim() || !address.trim()) return;
+    setIsSaving(true);
+
+    let lat = coords?.latitude ?? null;
+    let lon = coords?.longitude ?? null;
+    let finalAddress = address.trim();
+
+    if (!lat || !lon) {
+      try {
+        const data = await runGeocode(finalAddress);
+        lat = data.latitude;
+        lon = data.longitude;
+        finalAddress = data.formatted_address;
+        setCoords(data);
+        setAddress(finalAddress);
+      } catch {
+        // proceed without coordinates if geocoding fails
+      }
+    }
+
     createFarm(
+      { name: name.trim(), address: finalAddress, latitude: lat, longitude: lon },
       {
-        name: name.trim(),
-        address: address.trim(),
-        latitude: coords?.latitude ?? null,
-        longitude: coords?.longitude ?? null,
-      },
-      { onSuccess: () => navigate('/farms') }
+        onSuccess: () => navigate('/farms'),
+        onSettled: () => setIsSaving(false),
+      }
     );
   };
 
+  const busy = isSaving || isCreating || isGeocoding;
   const isValid = name.trim() && address.trim();
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Add Farm</h1>
-        <p className="text-gray-600 mt-1">Register a new farm and get its weather automatically.</p>
+        <p className="text-gray-600 mt-1">Register a new farm to get weather and livestock insights.</p>
       </div>
 
       <Card>
@@ -56,48 +80,49 @@ export default function AddFarm() {
           <CardTitle className="text-base">Farm Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Farm name */}
           <div className="space-y-1.5">
             <Label>Farm Name *</Label>
             <Input
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Green Valley Farm"
+              disabled={busy}
             />
           </div>
 
-          {/* Address + geocode */}
           <div className="space-y-1.5">
             <Label>Farm Address *</Label>
             <div className="flex gap-2">
               <Input
                 value={address}
-                onChange={e => { setAddress(e.target.value); setCoords(null); }}
+                onChange={e => { setAddress(e.target.value); setCoords(null); setGeocodeError(''); }}
                 placeholder="e.g. Sargodha Road, Faisalabad, Pakistan"
                 onKeyDown={e => e.key === 'Enter' && handleGeocode()}
                 className="flex-1"
+                disabled={busy}
               />
               <Button
                 variant="outline"
                 onClick={handleGeocode}
-                disabled={!address.trim() || isGeocoding}
+                disabled={!address.trim() || busy}
+                title="Preview coordinates"
               >
                 {isGeocoding
-                  ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  ? <Loader2 size={15} className="animate-spin" />
                   : <Search size={16} />
                 }
               </Button>
             </div>
-            <p className="text-xs text-gray-400">Enter the address then click the search button to get coordinates.</p>
+            <p className="text-xs text-gray-400">
+              Coordinates are set automatically when you save. Use the search button to preview first.
+            </p>
 
-            {/* Geocode error */}
             {geocodeError && (
               <div className="flex items-center gap-2 text-sm text-red-600 mt-1">
                 <AlertTriangle size={14} /> {geocodeError}
               </div>
             )}
 
-            {/* Geocode success */}
             {coords && (
               <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg space-y-1">
                 <div className="flex items-center gap-2 text-green-700 font-medium text-sm">
@@ -110,26 +135,19 @@ export default function AddFarm() {
                 </p>
               </div>
             )}
-
-            {!coords && address.trim() && (
-              <p className="text-xs text-orange-500 mt-1">
-                ⚠ Click search to verify the location and get coordinates for weather data.
-              </p>
-            )}
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => navigate('/farms')}>
+            <Button variant="outline" className="flex-1" onClick={() => navigate('/farms')} disabled={busy}>
               Cancel
             </Button>
             <Button
               className="flex-1"
               onClick={handleSubmit}
-              disabled={!isValid || isCreating}
+              disabled={!isValid || busy}
             >
-              {isCreating
-                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> Saving...</>
+              {busy
+                ? <><Loader2 size={15} className="animate-spin mr-2" /> {isGeocoding || isSaving ? 'Getting location...' : 'Saving...'}</>
                 : 'Add Farm'
               }
             </Button>

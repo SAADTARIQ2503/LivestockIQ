@@ -45,7 +45,7 @@ class FarmGeocodeView(APIView):
     """
     POST /api/v1/farms/geocode/
     Body: { "address": "...", "farm_id": 1 }
-    Geocodes address via Google Maps and optionally saves to farm.
+    Geocodes address via OpenStreetMap Nominatim (free, no billing required).
     """
     permission_classes = [IsAuthenticated]
 
@@ -54,31 +54,40 @@ class FarmGeocodeView(APIView):
         if not address:
             return Response({'error': 'address is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        api_key = settings.API_KEYS.get('GOOGLE_MAPS')
-        if not api_key:
-            return Response({'error': 'Google Maps API key not configured'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
         try:
             resp = requests.get(
-                'https://maps.googleapis.com/maps/api/geocode/json',
-                params={'address': address, 'key': api_key},
-                timeout=5
+                'https://nominatim.openstreetmap.org/search',
+                params={'q': address, 'format': 'json', 'limit': 1, 'addressdetails': 1},
+                headers={'User-Agent': 'LivestockIQ/1.0 (livestock management system)', 'Accept-Language': 'en'},
+                timeout=10
             )
             resp.raise_for_status()
-            data = resp.json()
+            results = resp.json()
         except requests.RequestException as e:
             return Response({'error': f'Geocoding service unavailable: {e}'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-        if data.get('status') != 'OK' or not data.get('results'):
+        if not results:
             return Response(
-                {'error': f"Could not geocode address. Google status: {data.get('status')}"},
+                {'error': 'Could not find that address. Try adding the city or country name.'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        location = data['results'][0]['geometry']['location']
-        lat = location['lat']
-        lon = location['lng']
-        formatted_address = data['results'][0].get('formatted_address', address)
+        lat = float(results[0]['lat'])
+        lon = float(results[0]['lon'])
+
+        addr = results[0].get('address', {})
+        raw_city = (
+            addr.get('city') or addr.get('town') or addr.get('village') or
+            addr.get('municipality') or addr.get('county') or addr.get('district') or
+            addr.get('state_district') or addr.get('state') or ''
+        )
+        # Strip common administrative suffixes so "Faisalabad District" → "Faisalabad"
+        for suffix in (' District', ' Division', ' City Tehsil', ' Tehsil', ' City'):
+            if raw_city.endswith(suffix):
+                raw_city = raw_city[:-len(suffix)]
+                break
+        country = addr.get('country', '')
+        formatted_address = ', '.join(filter(None, [raw_city, country])) or results[0].get('display_name', address)
 
         farm_id = request.data.get('farm_id')
         if farm_id:
