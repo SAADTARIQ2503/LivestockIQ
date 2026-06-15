@@ -126,7 +126,32 @@ class GotOCRService:
             delta = chunk.choices[0].delta.content
             if delta:
                 chunks.append(delta)
-        return "".join(chunks).strip()
+        raw = "".join(chunks).strip()
+
+        # Strip "**Label:** " prefix only (e.g. "**Answer:** NO_TEXT_FOUND" → "NO_TEXT_FOUND")
+        # Use anchored regex so we don't erase bold IDs like "**73**"
+        raw = re.sub(r'^\*{1,2}[^*:]+\*{1,2}\s*:\s*', '', raw).strip()
+        # Also strip trailing asterisks left from full-bold wrapping e.g. "**73**" → "73"
+        raw = raw.strip('*').strip()
+
+        # If "NO_TEXT_FOUND" appears anywhere in the response, honour it
+        if 'NO_TEXT_FOUND' in raw.upper():
+            return 'NO_TEXT_FOUND'
+
+        # Long responses are verbose explanations, not IDs
+        if len(raw) > 50:
+            logger.debug("[NVIDIA-OCR] verbose response (%d chars) — treating as no ID", len(raw))
+            return 'NO_TEXT_FOUND'
+
+        # Sentence-like words mean the model gave an explanation instead of an ID
+        if re.search(
+            r'\b(the|this|that|there|is|are|has|have|no|not|none|visible|found|see|shows|appears|cannot|image|animal|cow)\b',
+            raw, re.IGNORECASE,
+        ):
+            logger.debug("[NVIDIA-OCR] sentence words in response — treating as no ID: %r", raw)
+            return 'NO_TEXT_FOUND'
+
+        return raw
 
     # ── GOT-OCR-2.0 (local fallback) ─────────────────────────────────────────
 
@@ -229,7 +254,9 @@ class GotOCRService:
         """
         Two-pass GOT-OCR-2.0 fallback.
         Pass 1: standard preprocessing.
-        Pass 2: high-contrast fallback (only if pass-1 yields no parseable ID).
+        Pass 2: high-contrast fallback.
+        Returns the raw text from whichever pass yields a parseable ID,
+        or "NO_TEXT_FOUND" if neither pass finds one.
         """
         self._load_got()
         raw1 = self._got_infer(self._preprocess(image))
@@ -238,7 +265,9 @@ class GotOCRService:
             return raw1
         raw2 = self._got_infer(self._preprocess_highcontrast(image))
         logger.debug("[GOT-OCR] Pass-2 raw: %r", raw2)
-        return raw2 if self.parse_animal_id(raw2) is not None else raw1
+        if self.parse_animal_id(raw2) is not None:
+            return raw2
+        return "NO_TEXT_FOUND"
 
     # ── Public interface ──────────────────────────────────────────────────────
 
@@ -256,16 +285,20 @@ class GotOCRService:
             key = self._get_nvidia_key()
             if key:
                 raw = self._nvidia_ocr(image)
+                logger.debug("[NVIDIA-OCR] raw: %r", raw)
                 if raw and raw != "NO_TEXT_FOUND":
-                    logger.debug("[NVIDIA-OCR] raw: %r", raw)
                     return raw
-                logger.debug("[NVIDIA-OCR] no text found, trying fallback")
+                # NVIDIA succeeded but explicitly found no tag — trust it.
+                # Do NOT fall back to GOT: GOT is a general text model that
+                # would read watermarks, timestamps, and other noise and produce
+                # false IDs.
+                return "NO_TEXT_FOUND"
         except ImportError:
             logger.debug("[NVIDIA-OCR] openai not installed, using GOT fallback")
         except Exception:
             logger.warning("[NVIDIA-OCR] API call failed, using GOT fallback", exc_info=True)
 
-        # ── Fallback: GOT-OCR-2.0 ─────────────────────────────────────────
+        # ── Fallback: GOT-OCR-2.0 (only reached when NVIDIA is unavailable) ──
         try:
             return self._got_ocr(image)
         except Exception:
@@ -313,7 +346,7 @@ class GotOCRService:
           "ID: 42"  →  "Tag: A-042"  →  "A042" / "B-7"  →  bare number
         Returns the first match as int, or None.
         """
-        if not text:
+        if not text or 'NO_TEXT_FOUND' in text.upper():
             return None
 
         def _is_hallucination(n: int) -> bool:
